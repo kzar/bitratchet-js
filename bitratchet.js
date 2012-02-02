@@ -1,3 +1,6 @@
+/*global ArrayBuffer, Uint8Array*/
+/*jslint bitwise: true, regexp: true, indent: 4*/
+
 var bitratchet;
 if (!bitratchet) {
     bitratchet = {};
@@ -9,7 +12,8 @@ if (!bitratchet) {
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
             function map_fields(f) {
-                for (var field in structure) {
+                var field;
+                for (field in structure) {
                     if (structure.hasOwnProperty(field)) {
                         f(field, structure[field]);
                     }
@@ -18,13 +22,14 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var result = {}, position = 0;
+                    data = new Uint8Array(data);
                     map_fields(function (k, v) {
-                        var byte_offset, bit_offset, spare_bits, shifted_data;
+                        var byte_offset, bit_offset, spare_bits, shifted_data, i;
                         if (position % 8 === 0) {
                             // If our position falls on a byte just parse the field
                             if (v.length) {
                                 // If field has set length just pass it required data
-                                result[k] = v.parse(data.subarray(position / 8, position / 8 + Math.ceil(v.length / 8)))
+                                result[k] = v.parse(data.subarray(position / 8, position / 8 + Math.ceil(v.length / 8)));
                             } else {
                                 // Otherwise pass it all remaining data
                                 result[k] = v.parse(data.subarray(position / 8));
@@ -54,12 +59,13 @@ if (!bitratchet) {
                     return result;
                 },
                 unparse : function (data) {
-                    var results = [], assembled_data, byte_position, bit_offset;
+                    var results = [], assembled_data, byte_position, bit_offset, that, i, j;
                     // First parse each part collecting the result and it's length
                     this.length = 0;
-                    map_fields(function(k, v) {
+                    that = this;
+                    map_fields(function (k, v) {
                         results.concat({ value : v.unparse(data[k]), length : v.length });
-                        this.length += v.length;
+                        that.length += v.length;
                     });
                     // Now put all those results into an ArrayBuffer and return
                     assembled_data = new Uint8Array(new ArrayBuffer(Math.ceil(this.length / 8)));
@@ -67,7 +73,7 @@ if (!bitratchet) {
                     byte_position = 0;
                     for (i = 0; i <  results.length; i += 1) {
                         for (j = 0; j < results[i].value.length; j += 1) {
-                            if (bit_offest === 0) {
+                            if (bit_offset === 0) {
                                 // No bit offset so copy byte over straight
                                 assembled_data[byte_position] = results[i].value[j];
                             } else {
@@ -79,13 +85,13 @@ if (!bitratchet) {
                             }
                             byte_position += 1;
                         }
-                        bit_offset = (bit_offest + results[i].length) % 8;
+                        bit_offset = (bit_offset + results[i].length) % 8;
                     }
                     return assembled_data;
                 },
                 length: 0
             };
-        }
+        };
     }
 
     if (typeof bitratchet.number !== 'function') {
@@ -135,6 +141,7 @@ if (!bitratchet) {
             bitratchet.number = function number(options) {
                 return {
                     parse : function (data) {
+                        data = new Uint8Array(data);
                         return round_number(binary_to_number(data, options.length, options.signed) * scale(options), options.precision);
                     },
                     unparse : function (data) {
@@ -142,21 +149,21 @@ if (!bitratchet) {
                     },
                     length: options.length
                 };
-            }
-        })();
+            };
+        }());
     }
 
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
             return {
                 parse : function (data) {
-                    var index = options.type.parse(data);
+                    var index = options.type.parse(new Uint8Array(data));
                     this.length = options.type.length;
                     return index < options.table.length ? options.table[index] : options.missing;
                 },
                 unparse : function (data) {
                     var i, result;
-                    for (var i = 0; i < options.table.length; i += 1) {
+                    for (i = 0; i < options.table.length; i += 1) {
                         if (lookup[i] === data) {
                             result = options.type.unparse(i);
                             this.length = options.type.length;
@@ -169,7 +176,7 @@ if (!bitratchet) {
                 // and options.type has variable length. (Unlikely in fairness)
                 length : options.type.length
             };
-        }
+        };
     }
 
     if (typeof bitratchet.flags !== 'function') {
@@ -177,6 +184,7 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var i, results = {};
+                    data = new Uint8Array(data);
                     // Next assemble the result
                     for (i = 0; i < options.length; i += 1) {
                         if (options.flags[i]) {
@@ -184,7 +192,7 @@ if (!bitratchet) {
                             results[options.flags[i]] = options.values[(data[Math.floor(i / 8)] >> (i % 8)) & 0xf];
                         }
                     }
-                    return results
+                    return results;
                 },
                 unparse : function (data) {
                     var i, current_byte, bytes = new Uint8Array(new ArrayBuffer(Math.ceil(options.length / 8)));
@@ -196,8 +204,8 @@ if (!bitratchet) {
                     return bytes;
                 },
                 length : options.length
-            }
-        }
+            };
+        };
     }
 
     if (typeof bitratchet.dynamic !== 'function') {
@@ -205,7 +213,7 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var field = f(),
-                        result = field.parse(data);
+                        result = field.parse(new Uint8Array(data));
                     this.length = field.length;
                     return result;
                 },
@@ -217,7 +225,7 @@ if (!bitratchet) {
                 },
                 length: 0
             };
-        }
+        };
     }
 
     if (typeof bitratchet.hex !== 'function') {
@@ -230,9 +238,9 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var i, hex = '';
-                    // Make sure we've been given an acceptable amount of data
-                    if (data.length * 8 > options.length + 4 ||
-                        data.length * 8 < options.length) {
+                    data = new Uint8Array(data);
+                    // Make sure we've been given enough data
+                    if (data.length * 8 > options.length + 4) {
                         throw "Wrong amount of data given to parse to hex";
                     }
                     // Parse to hex
@@ -248,7 +256,7 @@ if (!bitratchet) {
                 },
                 unparse : function (data) {
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
-                        throw "Invalid hex, can't unparse."
+                        throw "Invalid hex, can't unparse.";
                     }
                     var i, bytes = new Uint8Array(new ArrayBuffer(Math.ceil(options.length / 8)));
                     // Chunk hex
@@ -260,29 +268,7 @@ if (!bitratchet) {
                     return bytes;
                 },
                 length : options.length
-            }
+            };
         };
     }
-})();
-
-
-// FIXME - scrap?
-    function reverse_lookup(object, value) {
-        var key;
-        for (key in object) {
-            if (object.hasOwnProperty(key) && object[key] === value) {
-                return parseInt(key, 10);
-            }
-        }
-    }
-
-
-    function arraybuffer_to_array(arraybuffer) {
-        var i, a = [];
-        for (i = 0; i < arraybuffer.length; i += 1) {
-            a[i] = arraybuffer[i];
-        }
-        return a;
-    }
-
-
+}());

@@ -106,7 +106,7 @@ test("Dynamic", function () {
             if (a) {
                 return bitratchet.number({ length : 4 });
             } else {
-                return bitratchet.hex({ length : 8 });
+                return bitratchet.hex({ length : 8 * 2});
             }
         },
         data = init_buffer(0x13, 0x37);
@@ -119,7 +119,7 @@ test("Dynamic", function () {
     a = false;
     field = bitratchet.dynamic(f);
     same(field.parse(data), "1337");
-    same(field.length, 8);
+    same(field.length, 16);
 });
 
 test("Hex", function () {
@@ -216,6 +216,6 @@ test("Nested records with shifting and spare bits", function () {
     same(record.length, 0);
     same(record.parse(data), { a : { a : 0x7 }, b : { a : 0x1, b : 0x6 }, c : 0xe5 });
     same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x1, b : 0x6 }, c : 0xe5 })), a_to_s(data));
+    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x1, b : 0x6 }, c : "e5" })), a_to_s(data));
     same(record.length, 8 * 4);
 });
