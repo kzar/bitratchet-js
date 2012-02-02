@@ -59,35 +59,37 @@ if (!bitratchet) {
                     return result;
                 },
                 unparse : function (data) {
-                    var results = [], assembled_data, byte_position, bit_offset, that, i, j;
+                    var results = [], bytes, buffer, byte_position, bit_offset, that, i, j;
                     // First parse each part collecting the result and it's length
                     this.length = 0;
                     that = this;
                     map_fields(function (k, v) {
-                        results.concat({ value : v.unparse(data[k]), length : v.length });
+                        results.push({ value : new Uint8Array(v.unparse(data[k])), length : v.length });
                         that.length += v.length;
                     });
+                    console.log(results);
                     // Now put all those results into an ArrayBuffer and return
-                    assembled_data = new Uint8Array(new ArrayBuffer(Math.ceil(this.length / 8)));
+                    buffer = new ArrayBuffer(Math.ceil(this.length / 8));
+                    bytes = new Uint8Array(buffer);
                     bit_offset = 0;
                     byte_position = 0;
                     for (i = 0; i <  results.length; i += 1) {
                         for (j = 0; j < results[i].value.length; j += 1) {
                             if (bit_offset === 0) {
                                 // No bit offset so copy byte over straight
-                                assembled_data[byte_position] = results[i].value[j];
+                                bytes[byte_position] = results[i].value[j];
                             } else {
                                 // Take account of bit offset when copying byte over
-                                assembled_data[byte_position] = assembled_data[byte_position] | results[i].value[j] >> bit_offset;
-                                if (byte_position + 1 < assembled_data.length) {
-                                    assembled_data[byte_position + 1] = results[i].value[j] & bit_offset;
+                                bytes[byte_position] = bytes[byte_position] | results[i].value[j] >> bit_offset;
+                                if (byte_position + 1 < bytes.length) {
+                                    bytes[byte_position + 1] = results[i].value[j] & bit_offset;
                                 }
                             }
                             byte_position += 1;
                         }
                         bit_offset = (bit_offset + results[i].length) % 8;
                     }
-                    return assembled_data;
+                    return buffer;
                 },
                 length: 0
             };
@@ -97,33 +99,47 @@ if (!bitratchet) {
     if (typeof bitratchet.number !== 'function') {
         (function () {
             // Helper functions for working with numbers
-            function binary_to_number(bytes, signed, bit_count) {
+            function binary_to_number(bytes, bit_count, signed) {
                 var i, byte_count, number;
                 byte_count = Math.ceil(bit_count / 8);
                 for (i = 0; i < byte_count; i += 1) {
                     if (i === 0) {
-                        // For last byte mask any spare bits
-                        number = bytes[byte_count - 1] & Math.pow(2, 8 - bit_count % 8);
+                        // Last byte
+                        if (bit_count % 8 === 0) {
+                            // No spare bits
+                            number = bytes[byte_count - 1];
+                        } else {
+                            // Spare bits, mask them
+                            number = bytes[byte_count - 1] & Math.pow(2, bit_count % 8) - 1;
+                        }
                     } else {
-                        // For other bytes add 'em on
+                        // Shift other bytes off
                         number += bytes[byte_count - i - 1] * Math.pow(2, i * 8);
                     }
                 }
                 return signed ? number >> 0 : number >>> 0;
             }
             function number_to_binary(number, bit_count) {
-                var i = 0, bytes = new Uint8Array(new ArrayBuffer(Math.ceil(bit_count / 8)));
+                var i = 0, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+                    bytes = new Uint8Array(buffer);
                 while (i < bytes.length) {
                     if (i === 0) {
-                        // For last byte mask any spare bits
-                        bytes[bytes.length - 1] = number & Math.pow(2, 8 - bit_count % 8);
+                        if (bit_count === 32) {
+                            console.log(number);
+                        }
+                        // Last byte
+                        if (bit_count % 8 === 0) {
+                            bytes[bytes.length - 1] = number & 0xff;
+                        } else {
+                            bytes[bytes.length - 1] = number >> 8 - bit_count % 8;
+                        }
                     } else {
-                        // For others add 'em in
+                        // Shift other bytes on
                         bytes[bytes.length - i - 1] = number / Math.pow(2, i * 8) & 0xff;
                     }
                     i += 1;
                 }
-                return bytes;
+                return buffer;
             }
             function round_number(number, precision) {
                 if (precision === undefined) {
@@ -181,6 +197,21 @@ if (!bitratchet) {
 
     if (typeof bitratchet.flags !== 'function') {
         bitratchet.flags = function flags(options) {
+            function current_byte(i) {
+                return Math.floor(i / 8);
+            }
+            function current_bit(i) {
+                return 7 - i % 8;
+            }
+            function a_index(a, item) {
+                var i;
+                for (i = 0; i < a.length; i += 1) {
+                    if (a[i] === item) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
             return {
                 parse : function (data) {
                     var i, results = {};
@@ -189,19 +220,21 @@ if (!bitratchet) {
                     for (i = 0; i < options.length; i += 1) {
                         if (options.flags[i]) {
                             // Select correct byte, then bit and use it to add result value
-                            results[options.flags[i]] = options.values[(data[Math.floor(i / 8)] >> (i % 8)) & 0xf];
+                            results[options.flags[i]] = options.values[data[current_byte(i)] >> current_bit(i) & 1];
                         }
                     }
                     return results;
                 },
                 unparse : function (data) {
-                    var i, current_byte, bytes = new Uint8Array(new ArrayBuffer(Math.ceil(options.length / 8)));
+                    var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
+                        bytes = new Uint8Array(buffer);
                     // Work through flags ORing their values onto relevant byte
                     for (i = 0; i < options.flags.length; i += 1) {
-                        current_byte = Math.floor(i / 8);
-                        bytes[current_byte] = bytes[current_byte] | (options.values[data[options.flags[i]]] << (i % 8));
+                        if (options.flags[i]) {
+                            bytes[current_byte(i)] = bytes[current_byte(i)] | (a_index(options.values, data[options.flags[i]]) << current_bit(i));
+                        }
                     }
-                    return bytes;
+                    return buffer;
                 },
                 length : options.length
             };
@@ -245,12 +278,16 @@ if (!bitratchet) {
                     }
                     // Parse to hex
                     for (i = 0; i < data.length; i += 1) {
-                        // Pad to byte unless we're on last nibble
-                        if (data[i] < 0x10 && i * 8 < options.length - 8) {
-                            hex += "0";
+                        if (i * 8 > options.length - 8) {
+                            // If we're on last nibble ignore extra nibble
+                            hex += (data[i] >> 4).toString(16)
+                        } else {
+                            // Otherwise add full padded byte
+                            if (data[i] < 0x10) {
+                                hex += "0";
+                            }
+                            hex += data[i].toString(16);
                         }
-                        // Either way add the nibble / byte
-                        hex += data[i].toString(16);
                     }
                     return hex;
                 },
@@ -258,14 +295,19 @@ if (!bitratchet) {
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
                         throw "Invalid hex, can't unparse.";
                     }
-                    var i, bytes = new Uint8Array(new ArrayBuffer(Math.ceil(options.length / 8)));
+                    var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
+                        bytes = new Uint8Array(buffer);
                     // Chunk hex
                     data = data.match(/.{1,2}/g);
                     // Convert to byte array
                     for (i = 0; i < bytes.length; i += 1) {
-                        bytes[i] = parseInt(data[i], 16);
+                        if (i * 8 > options.length - 8) {
+                            bytes[i] = parseInt(data[i], 16) & 0xf0;
+                        } else {
+                            bytes[i] = parseInt(data[i], 16);
+                        }
                     }
-                    return bytes;
+                    return buffer;
                 },
                 length : options.length
             };

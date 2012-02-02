@@ -4,6 +4,11 @@
 // Convert array / ArrayBuffer view to string for comparison in tests
 function a_to_s(a) {
     var i, result = '';
+    // If it's an array buffer put a view on it
+    if (!a.length) {
+        a = new Uint8Array(a);
+    }
+    // Iterate through converting to hex
     for (i = 0; i < a.length; i += 1) {
         result += '0x';
         if (a[i] < 0x10) {
@@ -39,13 +44,14 @@ test("Unsigned", function () {
     same(bitratchet.number({ length : 8 * 4 }).parse(data), 0xff0216ff);
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8}).unparse(0xdb)), "[0xdb]");
-    same(a_to_s(bitratchet.number({ length : 7}).unparse(0xdb)), "[0x5b]");
-    same(a_to_s(bitratchet.number({ length : 6}).unparse(0xdb)), "[0x1b]");
+    same(a_to_s(bitratchet.number({ length : 7}).unparse(0xdb)), "[0x6d]");
+    same(a_to_s(bitratchet.number({ length : 6}).unparse(0xdb)), "[0x36]");
     same(a_to_s(bitratchet.number({ length : 5}).unparse(0xdb)), "[0x1b]");
-    same(a_to_s(bitratchet.number({ length : 4}).unparse(0xdb)), "[0xb]");
-    same(a_to_s(bitratchet.number({ length : 3}).unparse(0xdb)), "[0x3]");
-    same(a_to_s(bitratchet.number({ length : 2}).unparse(0xdb)), "[0x3]");
-    same(a_to_s(bitratchet.number({ length : 1}).unparse(0xdb)), "[0x1]");
+    same(a_to_s(bitratchet.number({ length : 4}).unparse(0xdb)), "[0x0d]");
+    same(a_to_s(bitratchet.number({ length : 3}).unparse(0xdb)), "[0x06]");
+    same(a_to_s(bitratchet.number({ length : 2}).unparse(0xdb)), "[0x03]");
+    same(a_to_s(bitratchet.number({ length : 1}).unparse(0xdb)), "[0x01]");
+    same(a_to_s(bitratchet.number({ length : 8 * 4 }).unparse(0xff0216ff)), "[0xff, 0x02, 0x16, 0xff]");
 });
 
 test("Signed", function () {
@@ -63,10 +69,10 @@ test("Signed", function () {
     same(a_to_s(bitratchet.number({ length : 7, signed : true }).unparse(-0x7b)), "[0x7b]");
     same(a_to_s(bitratchet.number({ length : 6, signed : true }).unparse(-0x7b)), "[0x3b]");
     same(a_to_s(bitratchet.number({ length : 5, signed : true }).unparse(-0x7b)), "[0x1b]");
-    same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(-0x7b)), "[0xb]");
-    same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x7b)), "[0x3]");
-    same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x7b)), "[0x3]");
-    same(a_to_s(bitratchet.number({ length : 1, signed : true }).unparse(-0x7b)), "[0x1]");
+    same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(-0x7b)), "[0x0b]");
+    same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x7b)), "[0x03]");
+    same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x7b)), "[0x03]");
+    same(a_to_s(bitratchet.number({ length : 1, signed : true }).unparse(-0x7b)), "[0x01]");
     // Test length
     same(bitratchet.number({ length : 8, signed : true }).length, 8);
     same(bitratchet.number({ length : 7 }).length, 7);
@@ -88,21 +94,27 @@ module("Others");
 
 test("Flags", function () {
     // Init everything
-    var data = init_buffer(0xff, 0x01),
-        flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black"],
+    var data = init_buffer(0xff, 0x21),
+    flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black",
+             0, 0, "white", "cyan", "olive", 0, "mauve", "beige"],
         values = ["low", "high"],
         colours = bitratchet.flags({ length : 8 * 2, flags : flags, values : values });
     // Run the tests
     same(colours.length, 8 * 2);
-    same(colours.parse(data), { blue : "high", yellow : "high", green : "low",
-                                red : "low", purple : "low", black : "high" });
-    same(a_to_s(colours.unparse({ blue : "high", yellow : "high", green : "low",
-                                  red : "low", purple : "low", black : "high" })), a_to_s(data));
+    same(colours.parse(data), { blue : "high", yellow : "high", green : "high",
+                                red : "high", purple : "high", black : "high",
+                                white : "high", cyan : "low", olive : "low",
+                                mauve : "low", beige : "high" });
+    // 0x6f not 0xff because skipped bits default to low when unparsing
+    same(a_to_s(colours.unparse({ blue : "high", yellow : "high", green : "high",
+                                  red : "high", purple : "high", black : "high",
+                                  white : "high", cyan : "low", olive : "low",
+                                  mauve : "low", beige : "high" })), a_to_s([0x6f, 0x21]));
 });
 
 test("Dynamic", function () {
     var a, field,
-        f = function (a) {
+        f = function () {
             if (a) {
                 return bitratchet.number({ length : 4 });
             } else {
@@ -113,7 +125,7 @@ test("Dynamic", function () {
     // Test we get a nibble-number when a's truthy
     a = true;
     field = bitratchet.dynamic(f);
-    same(field.parse(data), 0x13);
+    same(field.parse(data), 0x03);
     same(field.length, 4);
     // Test we get an byte of hex otherwise
     a = false;
@@ -130,7 +142,7 @@ test("Hex", function () {
             bitratchet.hex({ length : 5 });
         },
         function (err) {
-            return err.message === "Invalid length, must be divisible by 4.";
+            return err === "Invalid length, must be divisible by 4.";
         }
     );
     raises(
@@ -138,7 +150,7 @@ test("Hex", function () {
             bitratchet.hex({ length : 4 }).parse(data);
         },
         function (err) {
-            return err.message === "Wrong amount of data given to parse to hex";
+            return err === "Wrong amount of data given to parse to hex";
         }
     );
     raises(
@@ -146,7 +158,7 @@ test("Hex", function () {
             bitratchet.hex({ length : 4 }).unparse("nonsense");
         },
         function (err) {
-            return err.message === "Invalid hex, can't unparse.";
+            return err === "Invalid hex, can't unparse.";
         }
     );
     // Test that good input gives right result
@@ -156,6 +168,12 @@ test("Hex", function () {
     same(a_to_s(bitratchet.hex({ length : 8 * 4 }).unparse("deadbeef")), a_to_s(data));
     same(a_to_s(bitratchet.hex({ length : 8 * 4 - 4 }).unparse("deadbeef")), a_to_s([0xde, 0xad, 0xbe, 0xe0]));
 });
+
+test("Lookup", function () {
+    var data = init_buffer(0xde, 0xad, 0xbe, 0xef);
+    ok(0);
+});
+
 
 module("Record");
 

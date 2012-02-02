@@ -14,7 +14,7 @@ Features include:
  - Handle dynamic fields that can vary in length and structure. Dynamic fields can vary based on any context at the time of parsing or unparsing the data.
  - Build your own flexible primtives that can extend the library to your problem domain. They can fully leverage the provided primitives.
 
-Developed by Dave Barker to aid parsing of a implementing a commerical telematics messaging protocol in Javascript.
+Developed to aid parsing of a implementing a commerical telematics messaging protocol in Javascript.
 
 Usage
 -----
@@ -49,7 +49,7 @@ Included primitives:
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
       }
  - `record` a really important primtive used to group primitives, detailed in it's own section below.
- - `flags` a useful primitive for handling bit flags, you provide an array of flag names and values an object is given in return.
+ - `flags` a useful primitive for handling bit flags, you provide an array of flag names and values an object is given in return. __Note that skipped bits are left low when unparsed.__
       Expected options:
       {
         length : Length in bits of raw data.
@@ -64,7 +64,7 @@ Included primitives:
       {
         length : Length of hex to read in bits, must be divisible by 4.
       }
-
+ - Lookup
 Records
 -------
 
