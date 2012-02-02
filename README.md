@@ -10,7 +10,7 @@ Makes use of the new ArrayBuffer Javascript feature and allows for simple (yet f
 Features include:
 
  - Avoid duplicate code, you only have to specify records once as with BinData.
- - Deal transparently with bit (as opposed to byte) based fields, shifting is taken care of.
+ - Deal transparently with bit (as opposed to byte) based fields, shifting is taken care of - as with the PHP BitRatchet.
  - Handle dynamic fields that can vary in length and structure.
  - Build your own flexible primtives that can extend the library to your problem domain.
 

@@ -1,16 +1,13 @@
-// BitRatchet - Javascript binary data processing library similar to BinData
-// Released under MIT licence, Copyright Dave Barker 2012
-
-var BitRatchet;
-if (!BitRatchet) {
-    BitRatchet = {};
+var bitratchet;
+if (!bitratchet) {
+    bitratchet = {};
 }
 
 (function () {
     "use strict";
 
-    if (typeof BitRatchet.record !== 'function') {
-        BitRatchet.record = function record(structure) {
+    if (typeof bitratchet.record !== 'function') {
+        bitratchet.record = function record(structure) {
             function map_fields(f) {
                 for (var field in structure) {
                     if (structure.hasOwnProperty(field)) {
@@ -91,7 +88,7 @@ if (!BitRatchet) {
         }
     }
 
-    if (typeof BitRatchet.number !== 'function') {
+    if (typeof bitratchet.number !== 'function') {
         (function () {
             // Helper functions for working with numbers
             function binary_to_number(bytes, signed, bit_count) {
@@ -135,7 +132,7 @@ if (!BitRatchet) {
                          Math.pow(2, options.length)) || 1);
             }
             // Actual number function
-            BitRatchet.number = function number(options) {
+            bitratchet.number = function number(options) {
                 return {
                     parse : function (data) {
                         return round_number(binary_to_number(data, options.length, options.signed) * scale(options), options.precision);
@@ -149,8 +146,8 @@ if (!BitRatchet) {
         })();
     }
 
-    if (typeof BitRatchet.lookup !== 'function') {
-        BitRatchet.lookup = function lookup(options) {
+    if (typeof bitratchet.lookup !== 'function') {
+        bitratchet.lookup = function lookup(options) {
             return {
                 parse : function (data) {
                     var index = options.type.parse(data);
@@ -175,8 +172,8 @@ if (!BitRatchet) {
         }
     }
 
-    if (typeof BitRatchet.flags !== 'function') {
-        BitRatchet.flags = function flags(options) {
+    if (typeof bitratchet.flags !== 'function') {
+        bitratchet.flags = function flags(options) {
             return {
                 parse : function (data) {
                     var i, results = {};
@@ -203,18 +200,18 @@ if (!BitRatchet) {
         }
     }
 
-    if (typeof BitRatchet.dynamic !== 'function') {
-        BitRatchet.dynamic = function dynamic(f) {
+    if (typeof bitratchet.dynamic !== 'function') {
+        bitratchet.dynamic = function dynamic(f) {
             return {
                 parse : function (data) {
                     var field = f(),
-                        result = f.parse(data);
+                        result = field.parse(data);
                     this.length = field.length;
                     return result;
                 },
                 unparse : function (data) {
                     var field = f(),
-                        result = f.unparse(data);
+                        result = field.unparse(data);
                     this.length = field.length;
                     return result;
                 },
@@ -223,8 +220,8 @@ if (!BitRatchet) {
         }
     }
 
-    if (typeof BitRatchet.hex !== 'function') {
-        BitRatchet.hex = function hex(options) {
+    if (typeof bitratchet.hex !== 'function') {
+        bitratchet.hex = function hex(options) {
             // Make sure we've been given a valid length
             if (options.length % 4 !== 0) {
                 throw "Invalid length, must be divisible by 4.";
