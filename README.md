@@ -64,7 +64,13 @@ Included primitives:
       {
         length : Length of hex to read in bits, must be divisible by 4.
       }
- - Lookup
+ - Lookup - a simple primitive you can use to parse "lookup table" entries, it accepts a data type (should be number), table array of values and optionally a missing value for situations where the table doesn't contain the value provided.
+      Expected options:
+      {
+        type : Primtive used to parse the lookup index, should be a number
+        table : Array of values, table[type.parse(data)] is used to parse a value
+        missing : Default value when table doesn't contain given index. Note - must be present in table
+      }
 Records
 -------
 

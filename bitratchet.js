@@ -9,6 +9,17 @@ if (!bitratchet) {
 (function () {
     "use strict";
 
+    function a_index(a, item) {
+        var i;
+        for (i = 0; i < a.length; i += 1) {
+            if (a[i] === item) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
             function map_fields(f) {
@@ -175,22 +186,26 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var index = options.type.parse(new Uint8Array(data));
+                    console.log(index);
                     this.length = options.type.length;
                     return index < options.table.length ? options.table[index] : options.missing;
                 },
                 unparse : function (data) {
-                    var i, result;
-                    for (i = 0; i < options.table.length; i += 1) {
-                        if (lookup[i] === data) {
-                            result = options.type.unparse(i);
-                            this.length = options.type.length;
-                            return result;
-                        }
+                    var index, result;
+                    index = a_index(options.table, data);
+                    index = index > -1 ? index : a_index(options.table, options.missing);
+                    if (index > -1) {
+                        result = options.type.unparse(index);
+                        this.length = options.type.length;
+                        return result;
                     }
-                    return options.missing;
+                    if (options.type.length === 0) {
+                        // Result was missing and lookup type is dynamic so we can't
+                        // know what the length should be. Throw an exception.
+                        throw "Lookup can't handle missing values when unparsing if the type is dynamic!";
+                    }
+                    return 0;
                 },
-                // FIXME - length can't be guarneteed when unparsing if lookup key is missing
-                // and options.type has variable length. (Unlikely in fairness)
                 length : options.type.length
             };
         };
@@ -203,15 +218,6 @@ if (!bitratchet) {
             }
             function current_bit(i) {
                 return 7 - i % 8;
-            }
-            function a_index(a, item) {
-                var i;
-                for (i = 0; i < a.length; i += 1) {
-                    if (a[i] === item) {
-                        return i;
-                    }
-                }
-                return -1;
             }
             return {
                 parse : function (data) {

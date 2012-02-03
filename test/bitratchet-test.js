@@ -169,8 +169,30 @@ test("Hex", function () {
 });
 
 test("Lookup", function () {
-    var data = init_buffer(0xde, 0xad, 0xbe, 0xef);
-    ok(0);
+    var data = init_buffer(0xff);
+    raises(
+        function () {
+            bitratchet.lookup({ type : bitratchet.dynamic(function () { }),
+                                table : [] }).unparse(data);
+        },
+        function (err) {
+            return err === "Lookup can't handle missing values when unparsing if the type is dynamic!";
+        }
+    );
+    same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
+                             table : ["off", "on"] }).parse(data), "on")
+    same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
+                             table : ["one", "two", "three", "four"] }).parse(data), "four")
+    same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
+                             table : ["off", "mistake"],
+                             missing : "off" }).parse(data), "off");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
+                                    table : ["off", "on"] }).unparse("on")), "[0x01]");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
+                                    table : ["off", "half", "on"] }).unparse("on")), "[0x02]");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
+                                    table : ["off", "half"],
+                                    missing : "off" }).unparse("on")), "[0x00]")
 });
 
 
