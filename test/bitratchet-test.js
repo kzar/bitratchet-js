@@ -223,7 +223,7 @@ test("Dynamic lengths", function () {
 });
 
 test("Nested records", function () {
-    var data = init_buffer(0x11, 0x12, 0xFF, 0x1),
+    var data = init_buffer(0x11, 0x12, 0xff, 0x1),
         record = bitratchet.record({ a : bitratchet.record({ a : bitratchet.number({ length : 8 }),
                                                              b : bitratchet.number({ length : 8 }) }),
                                      b : bitratchet.hex({ length : 8 * 2 })});
@@ -235,26 +235,26 @@ test("Nested records", function () {
 });
 
 test("Bit shifting", function () {
-    var data = init_buffer(0xF1, 0xF2, 0xFF, 0x1),
+    var data = init_buffer(0x01, 0xf2, 0xff, 0x1f),
         record = bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                      b : bitratchet.hex({ length : 8 }),
                                      c : bitratchet.number({ length : 21 })});
     same(record.length, 0);
-    same(record.parse(data), { a : 0x7, b : "8f", c : 0x12ff01 });
+    same(record.parse(data), { a : 0x7, b : "e3", c : 0x01f21f });
     same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x7, b : "8f", c : 0x12ff01 })), a_to_s(data));
+    same(a_to_s(record.unparse({ a : 0x7, b : "e3", c : 0x01f21f })), a_to_s(data));
     same(record.length, 8 * 4);
 });
 
 test("Nested records with shifting and spare bits", function () {
-    var data = init_buffer(0xF1, 0xF2, 0xFF, 0x1),
+    var data = init_buffer(0xf1, 0xf2, 0xff, 0x01),
         record = bitratchet.record({ a : bitratchet.record({ a : bitratchet.number({ length : 3 }) }),
                                      b : bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                                              b : bitratchet.number({ length : 3 }) }),
                                      c : bitratchet.hex({ length : 8 })});
     same(record.length, 0);
-    same(record.parse(data), { a : { a : 0x7 }, b : { a : 0x1, b : 0x6 }, c : 0xe5 });
+    same(record.parse(data), { a : { a : 0x1 }, b : { a : 0x0, b : 0x4 }, c : "7f" });
     same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x1, b : 0x6 }, c : "e5" })), a_to_s(data));
+    same(a_to_s(record.unparse({ a : { a : 0x1 }, b : { a : 0x0, b : 0x4 }, c : "7f" })), a_to_s(data));
     same(record.length, 8 * 4);
 });

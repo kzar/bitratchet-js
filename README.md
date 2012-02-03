@@ -80,6 +80,7 @@ Included primitives:
         table : Array of values, table[type.parse(data)] is used to parse a value
         missing : Default value when table doesn't contain given index. Note - must be present in table
       }
+
 Records
 -------
 
