@@ -40,6 +40,7 @@ The primitive object that's returned must follow these rules:
 Included primitives:
 
  - `number` can be used for most types of numbers. It handles signed / unsigned, scaled / integer and rounding.
+
       Expects an options object that can contain the following options:
       {
         length : Length of the number in bits, this is required.
@@ -48,23 +49,31 @@ Included primitives:
         scale_range : If the number is scaled to a range provide the range. (The same as providing a custom_scale of Math.pow(2, options.length) / options.scale_range)
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
       }
+
  - `record` a really important primtive used to group primitives, detailed in it's own section below.
  - `flags` a useful primitive for handling bit flags, you provide an array of flag names and values an object is given in return. __Note that skipped bits are left low when unparsed.__
+
       Expected options:
       {
         length : Length in bits of raw data.
         flags : Array of flags, falsey to skip / ignore, e.g. ["blue", 0, "red", "yellow"], should be of same length as length option above.
         values : Array of values, for example ["false", "true"] or ["off", "on"]
       }
+
  - `dynamic` a flexible primtiive that just expects a function. The function given must return another primitive and can make use of the previously read fields in a record and the data.
+
       Expected options:
       function that returns a primitive based on the context.
+
  - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundries however.)
+
       Expected options:
       {
         length : Length of hex to read in bits, must be divisible by 4.
       }
+
  - Lookup - a simple primitive you can use to parse "lookup table" entries, it accepts a data type (should be number), table array of values and optionally a missing value for situations where the table doesn't contain the value provided.
+
       Expected options:
       {
         type : Primtive used to parse the lookup index, should be a number
