@@ -67,7 +67,6 @@ if (!bitratchet) {
                         results.push({ value : new Uint8Array(v.unparse(data[k])), length : v.length });
                         that.length += v.length;
                     });
-                    console.log(results);
                     // Now put all those results into an ArrayBuffer and return
                     buffer = new ArrayBuffer(Math.ceil(this.length / 8));
                     bytes = new Uint8Array(buffer);
@@ -117,27 +116,29 @@ if (!bitratchet) {
                         number += bytes[byte_count - i - 1] * Math.pow(2, i * 8);
                     }
                 }
-                return signed ? number >> 0 : number >>> 0;
+                if (signed && number > Math.pow(2, bit_count - 1)) {
+                    return -(number - Math.pow(2, bit_count - 1));
+                } else {
+                    return number >>> 0;
+                }
             }
             function number_to_binary(number, bit_count) {
-                var i = 0, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+                var signed, bits_used, current_byte, i, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
                     bytes = new Uint8Array(buffer);
-                while (i < bytes.length) {
-                    if (i === 0) {
-                        if (bit_count === 32) {
-                            console.log(number);
-                        }
-                        // Last byte
-                        if (bit_count % 8 === 0) {
-                            bytes[bytes.length - 1] = number & 0xff;
-                        } else {
-                            bytes[bytes.length - 1] = number >> 8 - bit_count % 8;
-                        }
+                // Take note of signing then clear it
+                signed = number < 0;
+                number = Math.abs(number);
+                // Loop through bytes
+                for (i = 0; i < bytes.length; i += 1) {
+                    current_byte = bytes.length - i - 1;
+                    if (current_byte === 0) {
+                        // For most significant byte mask unused bits and make sure sign bit is high for negative numbers
+                        bits_used = bit_count % 8 || 8;
+                        bytes[0] = (number / Math.pow(2, i * 8)) & (Math.pow(2, bits_used) - 1) | (signed ? Math.pow(2, bits_used - 1) : 0);
                     } else {
-                        // Shift other bytes on
-                        bytes[bytes.length - i - 1] = number / Math.pow(2, i * 8) & 0xff;
+                        // For other bytes just shift along
+                        bytes[current_byte] = number / Math.pow(2, i * 8) & 0xff;
                     }
-                    i += 1;
                 }
                 return buffer;
             }
@@ -161,7 +162,7 @@ if (!bitratchet) {
                         return round_number(binary_to_number(data, options.length, options.signed) * scale(options), options.precision);
                     },
                     unparse : function (data) {
-                        return number_to_binary(Math.round(data / scale(options)) >>> 0, options.length);
+                        return number_to_binary(Math.round(data / scale(options)), options.length);
                     },
                     length: options.length
                 };

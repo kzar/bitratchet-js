@@ -44,11 +44,11 @@ test("Unsigned", function () {
     same(bitratchet.number({ length : 8 * 4 }).parse(data), 0xff0216ff);
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8}).unparse(0xdb)), "[0xdb]");
-    same(a_to_s(bitratchet.number({ length : 7}).unparse(0xdb)), "[0x6d]");
-    same(a_to_s(bitratchet.number({ length : 6}).unparse(0xdb)), "[0x36]");
+    same(a_to_s(bitratchet.number({ length : 7}).unparse(0xdb)), "[0x5b]");
+    same(a_to_s(bitratchet.number({ length : 6}).unparse(0xdb)), "[0x1b]");
     same(a_to_s(bitratchet.number({ length : 5}).unparse(0xdb)), "[0x1b]");
-    same(a_to_s(bitratchet.number({ length : 4}).unparse(0xdb)), "[0x0d]");
-    same(a_to_s(bitratchet.number({ length : 3}).unparse(0xdb)), "[0x06]");
+    same(a_to_s(bitratchet.number({ length : 4}).unparse(0xdb)), "[0x0b]");
+    same(a_to_s(bitratchet.number({ length : 3}).unparse(0xdb)), "[0x03]");
     same(a_to_s(bitratchet.number({ length : 2}).unparse(0xdb)), "[0x03]");
     same(a_to_s(bitratchet.number({ length : 1}).unparse(0xdb)), "[0x01]");
     same(a_to_s(bitratchet.number({ length : 8 * 4 }).unparse(0xff0216ff)), "[0xff, 0x02, 0x16, 0xff]");
@@ -62,17 +62,16 @@ test("Signed", function () {
     same(bitratchet.number({ length : 4, signed : true }).parse(data), -0x7);
     same(bitratchet.number({ length : 3, signed : true }).parse(data), -0x3);
     same(bitratchet.number({ length : 2, signed : true }).parse(data), -0x1);
-    same(bitratchet.number({ length : 1, signed : true }).parse(data), 0x1);
     same(bitratchet.number({ length : 8 * 4, signed : true }).parse(data), -0x7f0216ff);
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8, signed : true }).unparse(-0x7b)), "[0xfb]");
-    same(a_to_s(bitratchet.number({ length : 7, signed : true }).unparse(-0x7b)), "[0x7b]");
-    same(a_to_s(bitratchet.number({ length : 6, signed : true }).unparse(-0x7b)), "[0x3b]");
-    same(a_to_s(bitratchet.number({ length : 5, signed : true }).unparse(-0x7b)), "[0x1b]");
-    same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(-0x7b)), "[0x0b]");
-    same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x7b)), "[0x03]");
-    same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x7b)), "[0x03]");
-    same(a_to_s(bitratchet.number({ length : 1, signed : true }).unparse(-0x7b)), "[0x01]");
+    same(a_to_s(bitratchet.number({ length : 7, signed : true }).unparse(-0x3b)), "[0x7b]");
+    same(a_to_s(bitratchet.number({ length : 6, signed : true }).unparse(-0x1b)), "[0x3b]");
+    same(a_to_s(bitratchet.number({ length : 5, signed : true }).unparse(-0x0b)), "[0x1b]");
+    same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(-0x07)), "[0x0f]");
+    same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(0x07)), "[0x07]");
+    same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x03)), "[0x07]");
+    same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x01)), "[0x03]");
     // Test length
     same(bitratchet.number({ length : 8, signed : true }).length, 8);
     same(bitratchet.number({ length : 7 }).length, 7);
@@ -219,9 +218,9 @@ test("Bit shifting", function () {
                                      b : bitratchet.hex({ length : 8 }),
                                      c : bitratchet.number({ length : 21 })});
     same(record.length, 0);
-    same(record.parse(data), { a : 0x7, b : "47", c : 0x12ff01 });
+    same(record.parse(data), { a : 0x7, b : "8f", c : 0x12ff01 });
     same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x7, b : "47", c : 0x12ff01 })), a_to_s(data));
+    same(a_to_s(record.unparse({ a : 0x7, b : "8f", c : 0x12ff01 })), a_to_s(data));
     same(record.length, 8 * 4);
 });
 
