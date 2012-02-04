@@ -66,7 +66,7 @@ if (!bitratchet) {
                             field = v.parse(shifted_buffer, result);
                         }
                         // If field isn't false add it to the results
-                        if (field !== false) {
+                        if (field !== undefined) {
                             result[k] = field;
                         }
                         position += v.length;
@@ -257,16 +257,24 @@ if (!bitratchet) {
         bitratchet.dynamic = function dynamic(f) {
             return {
                 parse : function (data, record) {
-                    var field = f(record),
+                    var result, field = f(record);
+                    if (field) {
                         result = field.parse(data);
-                    this.length = field.length;
-                    return result;
+                        this.length = field.length;
+                        return result;
+                    } else {
+                        this.length = 0;
+                    }
                 },
                 unparse : function (data, record) {
-                    var field = f(record),
+                    var result, field = f(record);
+                    if (field) {
                         result = field.unparse(data);
-                    this.length = field.length;
-                    return result;
+                        this.length = field.length;
+                        return result;
+                    } else {
+                        this.length = 0;
+                    }
                 },
                 length: 0
             };
@@ -278,10 +286,10 @@ if (!bitratchet) {
         bitratchet.skip = function skip(options) {
             return {
                 parse : function (data) {
-                    return false;
+                    return undefined;
                 },
                 unparse : function (data) {
-                    return false;
+                    return undefined;
                 },
                 length : options.length
             };
