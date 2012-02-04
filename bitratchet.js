@@ -258,22 +258,24 @@ if (!bitratchet) {
             return {
                 parse : function (data, record) {
                     var result, field = f(record);
-                    if (field) {
+                    if (field.parse) {
                         result = field.parse(data);
                         this.length = field.length;
                         return result;
                     } else {
                         this.length = 0;
+                        return field;
                     }
                 },
                 unparse : function (data, record) {
                     var result, field = f(record);
-                    if (field) {
+                    if (field.unparse) {
                         result = field.unparse(data);
                         this.length = field.length;
                         return result;
                     } else {
                         this.length = 0;
+                        return field;
                     }
                 },
                 length: 0
