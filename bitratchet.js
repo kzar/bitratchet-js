@@ -35,7 +35,7 @@ if (!bitratchet) {
                     var result = {}, position = 0;
                     data = new Uint8Array(data);
                     map_fields(function (k, v) {
-                        var byte_offset, bit_offset, spare_bits, shifted_data, i, field;
+                        var byte_offset, bit_offset, spare_bits, shifted_data, shifted_buffer, i, field;
                         if (position % 8 === 0) {
                             // If our position falls on a byte just parse the field
                             if (v.length) {
@@ -51,18 +51,19 @@ if (!bitratchet) {
                             bit_offset = position % 8;
                             if (v.length) {
                                 // Field has set length so just shift required data
-                                shifted_data = new Uint8Array(new ArrayBuffer(Math.ceil(v.length / 8)));
+                                shifted_buffer = new ArrayBuffer(Math.ceil(v.length / 8));
                             } else {
                                 // Field has dynamic length so shift all remaining data
-                                shifted_data = new Uint8Array(new ArrayBuffer(data.length - byte_offset));
+                                shifted_buffer = new ArrayBuffer(data.length - byte_offset);
                             }
+                            shifted_data = new Uint8Array(shifted_buffer);
                             spare_bits = 0;
                             for (i = 0; i < shifted_data.length; i += 1) {
                                 shifted_data[i] = (data[i + byte_offset] >> bit_offset) | spare_bits;
                                 spare_bits = data[i + byte_offset] & bit_offset;
                             }
                             // Now we can parse it
-                            field = v.parse(shifted_data, result);
+                            field = v.parse(shifted_buffer, result);
                         }
                         // If field isn't false add it to the results
                         if (field !== false) {
@@ -189,10 +190,10 @@ if (!bitratchet) {
         bitratchet.lookup = function lookup(options) {
             return {
                 parse : function (data) {
-                    var index = options.type.parse(new Uint8Array(data));
-                    console.log(index);
-                    this.length = options.type.length;
-                    return index < options.table.length ? options.table[index] : options.missing;
+                    var index = options.type.parse(data);
+                    if (options.table.hasOwnProperty(index)) {
+                        return options.table[index];
+                    }
                 },
                 unparse : function (data) {
                     var index, result;
