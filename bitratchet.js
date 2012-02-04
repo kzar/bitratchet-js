@@ -35,15 +35,15 @@ if (!bitratchet) {
                     var result = {}, position = 0;
                     data = new Uint8Array(data);
                     map_fields(function (k, v) {
-                        var byte_offset, bit_offset, spare_bits, shifted_data, i;
+                        var byte_offset, bit_offset, spare_bits, shifted_data, i, field;
                         if (position % 8 === 0) {
                             // If our position falls on a byte just parse the field
                             if (v.length) {
                                 // If field has set length just pass it required data
-                                result[k] = v.parse(data.subarray(position / 8, position / 8 + Math.ceil(v.length / 8)));
+                                field = v.parse(data.subarray(position / 8, position / 8 + Math.ceil(v.length / 8)), result);
                             } else {
                                 // Otherwise pass it all remaining data
-                                result[k] = v.parse(data.subarray(position / 8));
+                                field = v.parse(data.subarray(position / 8), result);
                             }
                         } else {
                             // Our position falls over bytes so shift data along first
@@ -62,7 +62,11 @@ if (!bitratchet) {
                                 spare_bits = data[i + byte_offset] & bit_offset;
                             }
                             // Now we can parse it
-                            result[k] = v.parse(shifted_data);
+                            field = v.parse(shifted_data, result);
+                        }
+                        // If field isn't false add it to the results
+                        if (field !== false) {
+                            result[k] = field;
                         }
                         position += v.length;
                     });
@@ -75,7 +79,7 @@ if (!bitratchet) {
                     this.length = 0;
                     that = this;
                     map_fields(function (k, v) {
-                        results.push({ value : new Uint8Array(v.unparse(data[k])), length : v.length });
+                        results.push({ value : new Uint8Array(v.unparse(data[k], data)), length : v.length });
                         that.length += v.length;
                     });
                     // Now put all those results into an ArrayBuffer and return
@@ -251,14 +255,14 @@ if (!bitratchet) {
     if (typeof bitratchet.dynamic !== 'function') {
         bitratchet.dynamic = function dynamic(f) {
             return {
-                parse : function (data) {
-                    var field = f(),
-                        result = field.parse(new Uint8Array(data));
+                parse : function (data, record) {
+                    var field = f(record),
+                        result = field.parse(data);
                     this.length = field.length;
                     return result;
                 },
-                unparse : function (data) {
-                    var field = f(),
+                unparse : function (data, record) {
+                    var field = f(record),
                         result = field.unparse(data);
                     this.length = field.length;
                     return result;
@@ -267,6 +271,22 @@ if (!bitratchet) {
             };
         };
     }
+
+
+    if (typeof bitratchet.skip !== 'function') {
+        bitratchet.skip = function skip(options) {
+            return {
+                parse : function (data) {
+                    return false;
+                },
+                unparse : function (data) {
+                    return false;
+                },
+                length : options.length
+            };
+        };
+    }
+
 
     if (typeof bitratchet.hex !== 'function') {
         bitratchet.hex = function hex(options) {

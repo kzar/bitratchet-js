@@ -33,9 +33,11 @@ The primitive object that's returned must follow these rules:
 
  - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
+ - The `parse` and `unparse` functions should optionally accept a second parameter to access the parent record's context, useful for dynamic primitives that behave different based on other fields.
  - It must contain a length field containing a number specifying - in bits - how large the primtive is. If the primitive is of a static length this should be set immediately, if the primtive is of dynamic length it should be initially set to 0 and then adjusted by the parse and unparse functions.
  - If the primtive's length is not divisible by 8 it must ignore the remaining bits inside the last byte of the ArrayBuffer.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown. (With the - heh - exception of being given too much data, that should always be handled but the excess just ignored.)
+ - If the data should be skipped for whatever reason when parsing or unparsing `false` should be returned by the `parse` and `unparse` functions.
 
 Included primitives:
 
