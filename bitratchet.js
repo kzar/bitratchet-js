@@ -80,13 +80,16 @@ if (!bitratchet) {
                     return result;
                 },
                 unparse : function (data) {
-                    var results = [], bytes, buffer, byte_position, bit_offset, that, i, j;
+                    var results = [], bytes, buffer, byte_position, bit_offset, that, i, j, field;
                     // First parse each part collecting the result and it's length
                     this.length = 0;
                     that = this;
                     map_fields(function (k, v) {
-                        results.push({ value : new Uint8Array(v.unparse(data[k], data)), length : v.length });
-                        that.length += v.length;
+                        field = v.unparse(data[k], data)
+                        if (field !== undefined) {
+                            results.push({ value : new Uint8Array(field), length : v.length });
+                            that.length += v.length;
+                        }
                     });
                     // Now put all those results into an ArrayBuffer and return
                     buffer = new ArrayBuffer(Math.ceil(this.length / 8));
@@ -198,6 +201,8 @@ if (!bitratchet) {
                     var index = options.type.parse(data);
                     if (options.table.hasOwnProperty(index)) {
                         return options.table[index];
+                    } else {
+                        return options.missing;
                     }
                 },
                 unparse : function (data) {
@@ -280,7 +285,6 @@ if (!bitratchet) {
                         return result;
                     } else {
                         this.length = 0;
-                        return field;
                     }
                 },
                 length: 0
@@ -292,12 +296,8 @@ if (!bitratchet) {
     if (typeof bitratchet.skip !== 'function') {
         bitratchet.skip = function skip(options) {
             return {
-                parse : function (data) {
-                    return undefined;
-                },
-                unparse : function (data) {
-                    return undefined;
-                },
+                parse : function () { },
+                unparse : function () { },
                 length : options.length
             };
         };
@@ -323,7 +323,7 @@ if (!bitratchet) {
                     for (i = 0; i < data.length; i += 1) {
                         if (i * 8 > options.length - 8) {
                             // If we're on last nibble ignore extra nibble
-                            hex += (data[i] >> 4).toString(16)
+                            hex += (data[i] >> 4).toString(16);
                         } else {
                             // Otherwise add full padded byte
                             if (data[i] < 0x10) {

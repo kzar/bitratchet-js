@@ -79,7 +79,7 @@ test("Signed", function () {
 
 test("Scaling", function () {
     // Init our data to read
-    var data = init_buffer(0xff, 0x02, 0x16, 0xff);
+    var scaled_signed, data = init_buffer(0xff, 0x02, 0x16, 0xff);
     // Scale range
     same(bitratchet.number({ length : 8 * 4, scale_range : 360 }).parse(data), 358.6052297707647);
     // Precision
@@ -87,6 +87,10 @@ test("Scaling", function () {
                              scale_range : 360 }).parse(data), 358.6052);
     // Custom scaling
     same(bitratchet.number({ length : 8 * 4, custom_scale : 0.01 }).parse(data), 42783270.39);
+    // Scaled signed
+    scaled_signed = bitratchet.number({ length : 8 * 4, scale_range : 360, signed : true, precision : 8});
+    same(scaled_signed.parse(init_buffer(0xfe, 0x28, 0xa6, 0xb9)), -2.58919596);
+    same(a_to_s(scaled_signed.unparse(-2.58919596)), a_to_s([0xfe, 0x28, 0xa6, 0xb9]));
 });
 
 module("Others");
@@ -131,6 +135,11 @@ test("Dynamic", function () {
     field = bitratchet.dynamic(f);
     same(field.parse(data), "1337");
     same(field.length, 16);
+    // Test non-primitive returns work
+    field = bitratchet.dynamic(function () { return "yo"; });
+    same(field.parse(init_buffer(0x13)), "yo");
+    same(field.length, 0);
+    same(field.unparse("yo"), undefined);
 });
 
 test("Hex", function () {
