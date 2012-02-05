@@ -101,6 +101,8 @@ Records are created with a structure object, each field's value must be a primit
         hex : bitratchet.hex({ length : 8 })
      });
 
+Note - for convenience record.parse can accept a hex string instead of a proper ArrayBuffer of data.
+
 License
 -------
 Copyright Dave Barker 2012

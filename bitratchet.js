@@ -33,6 +33,11 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var result = {}, position = 0;
+                    // For convenience allow hex strings too
+                    if (typeof data === 'string') {
+                        data = bitratchet.hex({ length : 4 * data.length }).parse(data);
+                    }
+                    // Convert ArrayBuffer to int array for processing and begin
                     data = new Uint8Array(data);
                     map_fields(function (k, v) {
                         var byte_offset, bit_offset, spare_bits, shifted_data, shifted_buffer, i, field;
