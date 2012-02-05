@@ -35,7 +35,7 @@ if (!bitratchet) {
                     var result = {}, position = 0;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
-                        data = bitratchet.hex({ length : 4 * data.length }).parse(data);
+                        data = bitratchet.hex({ length : 4 * data.length }).unparse(data);
                     }
                     // Convert ArrayBuffer to int array for processing and begin
                     data = new Uint8Array(data);
