@@ -151,7 +151,7 @@ if (!bitratchet) {
                 if (number < 0) {
                     number = Math.abs(number) + Math.pow(2, bit_count - 1);
                 }
-                // Calculate most significant xbbyte
+                // Calculate most significant byte
                 bits_used = bit_count % 8 || 8;
                 bytes[0] = number / Math.pow(2, (bytes.length - 1) * 8) & (Math.pow(2, bits_used) - 1);
                 // Loop through other bytes
