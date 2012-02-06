@@ -123,50 +123,40 @@ if (!bitratchet) {
         (function () {
             // Helper functions for working with numbers
             function binary_to_number(bytes, bit_count, signed) {
-                var i, byte_count, number;
+                var i, byte_count, number, bits_used;
                 byte_count = Math.ceil(bit_count / 8);
-                for (i = 0; i < byte_count; i += 1) {
-                    if (i === 0) {
-                        // Last byte
-                        if (bit_count % 8 === 0) {
-                            // No spare bits
-                            number = bytes[byte_count - 1];
-                        } else {
-                            // Spare bits, mask them
-                            number = bytes[byte_count - 1] & Math.pow(2, bit_count % 8) - 1;
-                        }
-                    } else {
-                        // Shift other bytes off
-                        number += bytes[byte_count - i - 1] * Math.pow(2, i * 8);
-                    }
+                number = 0;
+                console.log(bytes);
+                // Add all but most significant byte
+                for (i = 0; i < byte_count - 1; i += 1) {
+                    // Shift other bytes off
+                    console.log(number);
+                    number += bytes[byte_count - i - 1] * Math.pow(2, i * 8);
                 }
+                    console.log(number);
+                // Add MSB
+                bits_used = bit_count % 8 || 8;
+                number += (bytes[0] & (Math.pow(2, bits_used) - 1)) * Math.pow(2, 8 * (byte_count - 1))
+                // FIXME this is broken
                 if (signed && number > Math.pow(2, bit_count - 1)) {
-                    if (bit_count < 32) {
-                        return -(number - Math.pow(2, bit_count - 1));
-                    } else {
-                        return number >> 0;
-                    }
+                    return -(number - Math.pow(2, bit_count - 1));
                 } else {
-                    return number >>> 0;
+                    return number;
                 }
             }
             function number_to_binary(number, bit_count) {
-                var signed, bits_used, current_byte, i, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+                var signed, bits_used, i, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
                     bytes = new Uint8Array(buffer);
-                // Take note of signing then clear it
-                signed = number < 0;
-                number = Math.abs(number);
-                // Loop through bytes
-                for (i = 0; i < bytes.length; i += 1) {
-                    current_byte = bytes.length - i - 1;
-                    if (current_byte === 0) {
-                        // For most significant byte mask unused bits and make sure sign bit is high for negative numbers
-                        bits_used = bit_count % 8 || 8;
-                        bytes[0] = (number / Math.pow(2, i * 8)) & (Math.pow(2, bits_used) - 1) | (signed ? Math.pow(2, bits_used - 1) : 0);
-                    } else {
-                        // For other bytes just shift along
-                        bytes[current_byte] = number / Math.pow(2, i * 8) & 0xff;
-                    }
+                // Deal with negative numbers
+                if (number < 0) {
+                    number = Math.abs(number) + Math.pow(2, bit_count - 1);
+                }
+                // Calculate most significant xbbyte
+                bits_used = bit_count % 8 || 8;
+                bytes[0] = number / Math.pow(2, (bytes.length - 1) * 8) & (Math.pow(2, bits_used) - 1);
+                // Loop through other bytes
+                for (i = 0; i < bytes.length - 1; i += 1) {
+                    bytes[bytes.length - 1 - i] = number / Math.pow(2, i * 8) & 0xff
                 }
                 return buffer;
             }

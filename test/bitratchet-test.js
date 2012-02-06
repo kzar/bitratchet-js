@@ -62,7 +62,7 @@ test("Signed", function () {
     same(bitratchet.number({ length : 4, signed : true }).parse(data), -0x7);
     same(bitratchet.number({ length : 3, signed : true }).parse(data), -0x3);
     same(bitratchet.number({ length : 2, signed : true }).parse(data), -0x1);
-    same(bitratchet.number({ length : 8 * 4, signed : true }).parse(data), -16640257);
+    same(bitratchet.number({ length : 8 * 4, signed : true }).parse(data), -2130843391);
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8, signed : true }).unparse(-0x7b)), "[0xfb]");
     same(a_to_s(bitratchet.number({ length : 7, signed : true }).unparse(-0x3b)), "[0x7b]");
@@ -72,8 +72,7 @@ test("Signed", function () {
     same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(0x07)), "[0x07]");
     same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x03)), "[0x07]");
     same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x01)), "[0x03]");
-    console.log("MARK");
-    same(a_to_s(bitratchet.number({ length : 8 * 4, signed : true }).unparse(-16640257)), "[0xff, 0x02, 0x16, 0xff]");
+    same(a_to_s(bitratchet.number({ length : 8 * 4, signed : true }).unparse(-2130843391)), a_to_s(data));
     // Test length
     same(bitratchet.number({ length : 8, signed : true }).length, 8);
     same(bitratchet.number({ length : 7 }).length, 7);
@@ -91,8 +90,18 @@ test("Scaling", function () {
     same(bitratchet.number({ length : 8 * 4, custom_scale : 0.01 }).parse(data), 42783270.39);
     // Scaled signed
     scaled_signed = bitratchet.number({ length : 8 * 4, scale_range : 360, signed : true, precision : 8});
+    console.log("MARK");
     same(scaled_signed.parse(init_buffer(0xfe, 0x28, 0xa6, 0xb9)), -2.58919596);
     same(a_to_s(scaled_signed.unparse(-2.58919596)), a_to_s([0xfe, 0x28, 0xa6, 0xb9]));
+});
+
+test("Large numbers", function() {
+    var data = init_buffer(0xff, 0xff, 0xff, 0xff, 0xff, 0xff);
+    console.log("MARK");
+    same(bitratchet.number({ length : 8 * 6 }).parse(data), 281474976710655);
+    same(bitratchet.number({ length : 8 * 6, signed : true }).parse(data), -140737488355327);
+    same(a_to_s(bitratchet.number({ length : 8 * 6 }).unparse(281474976710655)), a_to_s(data));
+    same(a_to_s(bitratchet.number({ length : 8 * 6, signed : true }).unparse(-140737488355327)), a_to_s(data));
 });
 
 module("Others");
