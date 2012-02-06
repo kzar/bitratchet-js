@@ -141,7 +141,11 @@ if (!bitratchet) {
                     }
                 }
                 if (signed && number > Math.pow(2, bit_count - 1)) {
-                    return -(number - Math.pow(2, bit_count - 1));
+                    if (bit_count < 32) {
+                        return -(number - Math.pow(2, bit_count - 1));
+                    } else {
+                        return number >> 0;
+                    }
                 } else {
                     return number >>> 0;
                 }
@@ -268,7 +272,7 @@ if (!bitratchet) {
             return {
                 parse : function (data, record) {
                     var result, field = f(record);
-                    if (field.parse) {
+                    if (field && field.parse) {
                         result = field.parse(data);
                         this.length = field.length;
                         return result;
@@ -279,7 +283,7 @@ if (!bitratchet) {
                 },
                 unparse : function (data, record) {
                     var result, field = f(record);
-                    if (field.unparse) {
+                    if (field && field.unparse) {
                         result = field.unparse(data);
                         this.length = field.length;
                         return result;

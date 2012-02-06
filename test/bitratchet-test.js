@@ -62,7 +62,7 @@ test("Signed", function () {
     same(bitratchet.number({ length : 4, signed : true }).parse(data), -0x7);
     same(bitratchet.number({ length : 3, signed : true }).parse(data), -0x3);
     same(bitratchet.number({ length : 2, signed : true }).parse(data), -0x1);
-    same(bitratchet.number({ length : 8 * 4, signed : true }).parse(data), -0x7f0216ff);
+    same(bitratchet.number({ length : 8 * 4, signed : true }).parse(data), -16640257);
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8, signed : true }).unparse(-0x7b)), "[0xfb]");
     same(a_to_s(bitratchet.number({ length : 7, signed : true }).unparse(-0x3b)), "[0x7b]");
@@ -72,6 +72,8 @@ test("Signed", function () {
     same(a_to_s(bitratchet.number({ length : 4, signed : true }).unparse(0x07)), "[0x07]");
     same(a_to_s(bitratchet.number({ length : 3, signed : true }).unparse(-0x03)), "[0x07]");
     same(a_to_s(bitratchet.number({ length : 2, signed : true }).unparse(-0x01)), "[0x03]");
+    console.log("MARK");
+    same(a_to_s(bitratchet.number({ length : 8 * 4, signed : true }).unparse(-16640257)), "[0xff, 0x02, 0x16, 0xff]");
     // Test length
     same(bitratchet.number({ length : 8, signed : true }).length, 8);
     same(bitratchet.number({ length : 7 }).length, 7);
@@ -282,4 +284,25 @@ test("Record containing dynamic primitive that uses record context.", function (
     same(record.parse(init_buffer(0x00, 0xab, 0xcd, 0xef)), { read_message : 0 });
     same(a_to_s(record.unparse({ read_message : 1, message : "abcdef" })), a_to_s([0x01, 0xab, 0xcd, 0xef]));
     same(a_to_s(record.unparse({ read_message : 0 })), a_to_s([0x00, 0x00, 0x00, 0x00]));
+});
+
+test("Record that skips some data.", function() {
+    var record, data = init_buffer(0xFF, 0x12, 0x34);
+    // Test skip primitive works properly
+    record = bitratchet.record({ skipped :  bitratchet.skip({ length : 8 }),
+                                 data : bitratchet.hex({ length : 8 * 2 }) });
+    same(record.parse(data), { data : "1234" });
+    same(a_to_s(record.unparse({ data : "1234" })), a_to_s([0x00, 0x12, 0x34]));
+    // Test dynamic skip doesn't move position on
+    record = bitratchet.record({ skipped :  bitratchet.dynamic(function () { }),
+                                 data : bitratchet.hex({ length : 8 * 2 }) });
+    same(record.parse(data), { data : "ff12" });
+    same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
+    same(a_to_s(record.unparse({ data : "FF12", skipped : "test" })), a_to_s([0xff, 0x12]));
+    // Test dynamic skip with value doesn't move position on
+    record = bitratchet.record({ skipped :  bitratchet.dynamic(function () { return "WAT"; }),
+                                 data : bitratchet.hex({ length : 8 * 2 }) });
+    same(record.parse(data), { skipped : "WAT", data : "ff12" });
+    same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
+    same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" })), a_to_s([0xff, 0x12]));
 });
