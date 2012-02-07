@@ -125,11 +125,8 @@ if (!bitratchet) {
             function bits_used(bit_count) {
                 return (bit_count % 8 || 8);
             }
-            function twos_compliment(bytes, bit_count) {
+            function twos_compliment(bytes) {
                 var i, carry = 1;
-                if (bit_count === 32) {
-                    console.log(bytes, bit_count);
-                }
                 // Perform two's compliment
                 for (i = bytes.length - 1; i >= 0; i -= 1) {
                     bytes[i] = ~bytes[i] & 0xff;
@@ -144,8 +141,6 @@ if (!bitratchet) {
                     }
 
                 }
-                // Mask extra bits
-                bytes[i] = bytes[i] & (Math.pow(2, bits_used(bit_count)) - 1);
                 return bytes;
             }
             function binary_to_number(bytes, bit_count, signed) {
@@ -156,12 +151,11 @@ if (!bitratchet) {
                     twos_compliment(bytes, bit_count);
                     negative = true;
                 }
+                // Mask any extra bits
+                bytes[0] = bytes[0] & (Math.pow(2, bits_used(bit_count)) - 1);
                 // Shift bytes onto our number
                 for (i = 0; i < bytes.length; i += 1) {
                     number += bytes[bytes.length - i - 1] * Math.pow(2, i * 8);
-                }
-                if (negative) {
-                    console.log(-number);
                 }
                 // Finally add correct sign and return
                 return negative ? -number : number;
@@ -178,10 +172,12 @@ if (!bitratchet) {
                 for (i = 0; i < bytes.length; i += 1) {
                     bytes[bytes.length - 1 - i] = number / Math.pow(2, i * 8) & 0xff
                 }
-                // Finally sign number if it's negative and return
+                // Sign number if it's negative
                 if (negative) {
                     twos_compliment(bytes, bit_count);
                 }
+                // Mask any extra bits and return
+                bytes[0] = bytes[0] & (Math.pow(2, bits_used(bit_count)) - 1);
                 return buffer;
             }
             function round_number(number, precision) {
