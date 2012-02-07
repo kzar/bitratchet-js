@@ -122,41 +122,65 @@ if (!bitratchet) {
     if (typeof bitratchet.number !== 'function') {
         (function () {
             // Helper functions for working with numbers
+            function bits_used(bit_count) {
+                return (bit_count % 8 || 8);
+            }
+            function twos_compliment(bytes, bit_count) {
+                var i, carry = 1;
+                if (bit_count === 32) {
+                    console.log(bytes, bit_count);
+                }
+                // Perform two's compliment
+                for (i = bytes.length - 1; i >= 0; i -= 1) {
+                    bytes[i] = ~bytes[i] & 0xff;
+                    if (carry) {
+                        if (bytes[i] < 255) {
+                            bytes[i] += carry;
+                            carry = 0;
+                        } else {
+                            bytes[i] = 0;
+                            carry = 1;
+                        }
+                    }
+
+                }
+                // Mask extra bits
+                bytes[i] = bytes[i] & (Math.pow(2, bits_used(bit_count)) - 1);
+                return bytes;
+            }
             function binary_to_number(bytes, bit_count, signed) {
-                var i, byte_count, number, bits_used;
-                byte_count = Math.ceil(bit_count / 8);
+                var i, number, negative;
                 number = 0;
-                console.log(bytes);
-                // Add all but most significant byte
-                for (i = 0; i < byte_count - 1; i += 1) {
-                    // Shift other bytes off
-                    console.log(number);
-                    number += bytes[byte_count - i - 1] * Math.pow(2, i * 8);
+                // If number's signed run twos_compliment on binary before we start
+                if (signed && (bytes[0] & Math.pow(2, bits_used(bit_count) - 1))) {
+                    twos_compliment(bytes, bit_count);
+                    negative = true;
                 }
-                    console.log(number);
-                // Add MSB
-                bits_used = bit_count % 8 || 8;
-                number += (bytes[0] & (Math.pow(2, bits_used) - 1)) * Math.pow(2, 8 * (byte_count - 1))
-                // FIXME this is broken
-                if (signed && number > Math.pow(2, bit_count - 1)) {
-                    return -(number - Math.pow(2, bit_count - 1));
-                } else {
-                    return number;
+                // Shift bytes onto our number
+                for (i = 0; i < bytes.length; i += 1) {
+                    number += bytes[bytes.length - i - 1] * Math.pow(2, i * 8);
                 }
+                if (negative) {
+                    console.log(-number);
+                }
+                // Finally add correct sign and return
+                return negative ? -number : number;
             }
             function number_to_binary(number, bit_count) {
-                var signed, bits_used, i, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+                var signed, i, negative, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
                     bytes = new Uint8Array(buffer);
                 // Deal with negative numbers
                 if (number < 0) {
-                    number = Math.abs(number) + Math.pow(2, bit_count - 1);
+                    number = Math.abs(number);
+                    negative = true;
                 }
-                // Calculate most significant byte
-                bits_used = bit_count % 8 || 8;
-                bytes[0] = number / Math.pow(2, (bytes.length - 1) * 8) & (Math.pow(2, bits_used) - 1);
                 // Loop through other bytes
-                for (i = 0; i < bytes.length - 1; i += 1) {
+                for (i = 0; i < bytes.length; i += 1) {
                     bytes[bytes.length - 1 - i] = number / Math.pow(2, i * 8) & 0xff
+                }
+                // Finally sign number if it's negative and return
+                if (negative) {
+                    twos_compliment(bytes, bit_count);
                 }
                 return buffer;
             }
@@ -176,8 +200,15 @@ if (!bitratchet) {
             bitratchet.number = function number(options) {
                 return {
                     parse : function (data) {
-                        data = new Uint8Array(data);
-                        return round_number(binary_to_number(data, options.length, options.signed) * scale(options), options.precision);
+                        var copy;
+                        // Create a view on the bytes we care about
+                        data = (new Uint8Array(data)).subarray(0, Math.ceil(options.length / 8));
+                        // Copy the data to avoid corrupting what was given to us
+                        // FIXME is this really necessary?
+                        copy = new Uint8Array(new ArrayBuffer(data.length));
+                        copy.set(data);
+                        // And parse
+                        return round_number(binary_to_number(copy, options.length, options.signed) * scale(options), options.precision);
                     },
                     unparse : function (data) {
                         return number_to_binary(Math.round(data / scale(options)), options.length);
