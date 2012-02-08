@@ -31,13 +31,12 @@ Primitives
 Primitives are used to parse individual fields, they are functions return a primitive object based on the options passed.
 The primitive object that's returned must follow these rules:
 
- - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
+ - It must contain a `parse` field containing a function that expects data in a ArrayBuffer (or a function to obtain said data if dynamic) and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
- - The `parse` and `unparse` functions should optionally accept a second parameter to access the parent record's context, useful for dynamic primitives that behave different based on other fields.
  - It must contain a length field containing a number specifying - in bits - how large the primtive is. If the primitive is of a static length this should be set immediately, if the primtive is of dynamic length it should be initially set to 0 and then adjusted by the parse and unparse functions.
- - If the primtive's length is not divisible by 8 it must ignore the remaining bits inside the last byte of the ArrayBuffer.
+ - If the primitive is dynamic and initially has a length of 0 it must be able to handle trailing data correctly itself. (Like the record primitive has to.)
+ - If the primtive's length is not divisible by 8 it should ignore any spare bits.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown. (With the - heh - exception of being given too much data, that should always be handled but the excess just ignored.)
- - If the data should be skipped for whatever reason when parsing or unparsing `undefined` should be returned by the `parse` and `unparse` functions.
 
 Included primitives:
 
@@ -88,7 +87,7 @@ Records
 
 Records are used to group primitves together, but they are actually are primitives too and follow all the rules that primitives follow. Even so records are a powerful tool, they can be nested and take care of all the bit shifting.
 
-Records are created with a structure object, each field's value must be a primitive.
+Records are created with a structure object, for example:
 
       Example showing nesting and bit-shifting:
 
@@ -100,6 +99,10 @@ Records are created with a structure object, each field's value must be a primit
         }),
         hex : bitratchet.hex({ length : 8 })
      });
+
+ - Each field's value should either be a primtive or a function that takes the current record context and returns one.
+ - During parsing if a primitive returns `undefined` it's data will be skipped.
+ - During parsing if a primitive returns anything else without the `parse` property the value returned will be used for the field.
 
 Note - for convenience record.parse can accept a hex string instead of a proper ArrayBuffer of data.
 

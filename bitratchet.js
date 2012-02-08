@@ -30,47 +30,53 @@ if (!bitratchet) {
                     }
                 }
             }
+            function shift_bytes(buffer, position, length) {
+                // FIXME FIXME FIXME - This function doesn't work correctly!
+                var shifted_buffer, shifted_bytes, i, bytes = new Uint8Array(buffer),
+                position_offset = position % 8, length_offset = length % 8;
+                // First create a view on the bytes we need
+                if (length === 0) {
+                    bytes = bytes.subarray(position / 8);
+                } else {
+                    bytes = bytes.subarray(position / 8,
+                                           position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
+                }
+                shifted_buffer = new ArrayBuffer(Math.ceil(length /8));
+                shifted_bytes = new Uint8Array(shifted_buffer);
+                // Shift bytes
+                for (i = 0; i < shifted_bytes.length; i += 1) {
+                    shifted_bytes[i] = ((bytes[i] << position_offset) & 0xff) | (bytes[i + 1] >> (8 - position_offset));
+                }
+                // Clear extra bits in LSB
+                if (length_offset) {
+                    spare_bits = length_offset - position_offset;
+                    shifted_bytes[i] = shifted_bytes[i] & (Math.pow(2, length_offset) - 1);
+                }
+                console.log(length_offset, position_offset, length, bytes, shifted_bytes, (Math.pow(2, 8 - length_offset) - 1));
+                return shifted_buffer;
+            }
             return {
                 parse : function (data) {
-                    var result = {}, position = 0;
+                    var result = {}, position = 0, bytes;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
                         data = bitratchet.hex({ length : 4 * data.length }).unparse(data);
                     }
                     // Convert ArrayBuffer to int array for processing and begin
-                    data = new Uint8Array(data);
                     map_fields(function (k, v) {
                         var byte_offset, bit_offset, spare_bits, shifted_data, shifted_buffer, i, field;
-                        if (position % 8 === 0) {
-                            // If our position falls on a byte just parse the field
-                            if (v.length) {
-                                // If field has set length just pass it required data
-                                field = v.parse(data.subarray(position / 8, position / 8 + Math.ceil(v.length / 8)), result);
-                            } else {
-                                // Otherwise pass it all remaining data
-                                field = v.parse(data.subarray(position / 8), result);
-                            }
-                        } else {
-                            // Our position falls over bytes so shift data along first
-                            byte_offset = Math.floor(position / 8);
-                            bit_offset = position % 8;
-                            if (v.length) {
-                                // Field has set length so just shift required data
-                                shifted_buffer = new ArrayBuffer(Math.ceil(v.length / 8));
-                            } else {
-                                // Field has dynamic length so shift all remaining data
-                                shifted_buffer = new ArrayBuffer(data.length - byte_offset);
-                            }
-                            shifted_data = new Uint8Array(shifted_buffer);
-                            spare_bits = 0;
-                            for (i = 0; i < shifted_data.length; i += 1) {
-                                shifted_data[i] = (data[i + byte_offset] >> bit_offset) | spare_bits;
-                                spare_bits = data[i + byte_offset] & bit_offset;
-                            }
-                            // Now we can parse it
-                            field = v.parse(shifted_buffer, result);
+                        if (typeof v === 'function') {
+                            // For dynamic fields first figure out what our primitive is
+                            v = v(result);
                         }
-                        // If field isn't false add it to the results
+                        if (v.hasOwnProperty('parse')) {
+                            // It's a primitive so parse the data
+                            field = v.parse(shift_bytes(data, position, v.length));
+                        } else {
+                            // Result was given instead of primitive, just use that
+                            field = v;
+                        }
+                        // If field isn't undefined add it to the results
                         if (field !== undefined) {
                             result[k] = field;
                         }
@@ -85,11 +91,14 @@ if (!bitratchet) {
                     this.length = 0;
                     that = this;
                     map_fields(function (k, v) {
-                        field = v.unparse(data[k], data)
+                        if (typeof v === 'function') {
+                            v = v(data);
+                        }
+                        field = v.unparse(data[k])
                         if (field !== undefined) {
                             results.push({ value : new Uint8Array(field), length : v.length });
-                            that.length += v.length;
                         }
+                        that.length += v.length;
                     });
                     // Now put all those results into an ArrayBuffer and return
                     buffer = new ArrayBuffer(Math.ceil(this.length / 8));
@@ -284,36 +293,6 @@ if (!bitratchet) {
         };
     }
 
-    if (typeof bitratchet.dynamic !== 'function') {
-        bitratchet.dynamic = function dynamic(f) {
-            return {
-                parse : function (data, record) {
-                    var result, field = f(record);
-                    if (field && field.parse) {
-                        result = field.parse(data);
-                        this.length = field.length;
-                        return result;
-                    } else {
-                        this.length = 0;
-                        return field;
-                    }
-                },
-                unparse : function (data, record) {
-                    var result, field = f(record);
-                    if (field && field.unparse) {
-                        result = field.unparse(data);
-                        this.length = field.length;
-                        return result;
-                    } else {
-                        this.length = 0;
-                    }
-                },
-                length: 0
-            };
-        };
-    }
-
-
     if (typeof bitratchet.skip !== 'function') {
         bitratchet.skip = function skip(options) {
             return {
@@ -337,6 +316,7 @@ if (!bitratchet) {
                     var i, hex = '';
                     data = new Uint8Array(data);
                     // Make sure we've been given enough data
+                    console.log(data, options.length);
                     if (data.length * 8 > options.length + 4) {
                         throw "Wrong amount of data given to parse to hex";
                     }

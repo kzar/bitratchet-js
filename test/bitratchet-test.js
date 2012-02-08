@@ -42,6 +42,7 @@ test("Unsigned", function () {
     same(bitratchet.number({ length : 2 }).parse(data), 0x3);
     same(bitratchet.number({ length : 1 }).parse(data), 0x1);
     same(bitratchet.number({ length : 8 * 4 }).parse(data), 0xff0216ff);
+
     // Test unparsing
     same(a_to_s(bitratchet.number({ length : 8}).unparse(0xdb)), "[0xdb]");
     same(a_to_s(bitratchet.number({ length : 7}).unparse(0xdb)), "[0x5b]");
@@ -125,33 +126,6 @@ test("Flags", function () {
                                   mauve : "low", beige : "high" })), a_to_s([0x6f, 0x21]));
 });
 
-test("Dynamic", function () {
-    var a, field,
-        f = function () {
-            if (a) {
-                return bitratchet.number({ length : 4 });
-            } else {
-                return bitratchet.hex({ length : 8 * 2});
-            }
-        },
-        data = init_buffer(0x13, 0x37);
-    // Test we get a nibble-number when a's truthy
-    a = true;
-    field = bitratchet.dynamic(f);
-    same(field.parse(data), 0x03);
-    same(field.length, 4);
-    // Test we get an byte of hex otherwise
-    a = false;
-    field = bitratchet.dynamic(f);
-    same(field.parse(data), "1337");
-    same(field.length, 16);
-    // Test non-primitive returns work
-    field = bitratchet.dynamic(function () { return "yo"; });
-    same(field.parse(init_buffer(0x13)), "yo");
-    same(field.length, 0);
-    same(field.unparse("yo"), undefined);
-});
-
 test("Hex", function () {
     var data = init_buffer(0xde, 0xad, 0xbe, 0xef);
     // Test that invalid options throw exception
@@ -191,7 +165,7 @@ test("Lookup", function () {
     var data = init_buffer(0xff);
     raises(
         function () {
-            bitratchet.lookup({ type : bitratchet.dynamic(function () { }),
+            bitratchet.lookup({ type : function () { },
                                 table : [] }).unparse(data);
         },
         function (err) {
@@ -230,9 +204,9 @@ test("Basic", function () {
 
 test("Dynamic lengths", function () {
     var data = init_buffer(0x11, 0x12, 0xFF, 0x1),
-        record = bitratchet.record({ a : bitratchet.dynamic(function () {
+        record = bitratchet.record({ a : function () {
             return bitratchet.number({ length : 8 * 2 });
-        }),
+        },
                                      b : bitratchet.hex({ length : 8 * 2 })});
     same(record.length, 0);
     same(record.parse(data), { a : 0x1112, b : "ff01" });
@@ -259,9 +233,9 @@ test("Bit shifting", function () {
                                      b : bitratchet.hex({ length : 8 }),
                                      c : bitratchet.number({ length : 21 })});
     same(record.length, 0);
-    same(record.parse(data), { a : 0x7, b : "e3", c : 0x01f21f });
+    same(record.parse(data), { a : 0x0, b : "0f", c : 0x12ff1f });
     same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x7, b : "e3", c : 0x01f21f })), a_to_s(data));
+    same(a_to_s(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f })), a_to_s(data));
     same(record.length, 8 * 4);
 });
 
@@ -280,14 +254,13 @@ test("Nested records with shifting and spare bits", function () {
 
 test("Record containing dynamic primitive that uses record context.", function () {
     var record = bitratchet.record({ read_message : bitratchet.number({ length : 8 }),
-                                     message : bitratchet.dynamic(function (record) {
+                                     message : function (record) {
                                          if (record.read_message) {
                                              return bitratchet.hex({ length : 8 * 3 });
                                          } else {
                                              return bitratchet.skip({ length : 8 * 3 });
                                          }
-                                     })
-                                   });
+                                     }});
     same(record.parse(init_buffer(0x01, 0xab, 0xcd, 0xef)), { read_message : 1, message : "abcdef" });
     same(record.parse(init_buffer(0x00, 0xab, 0xcd, 0xef)), { read_message : 0 });
     same(a_to_s(record.unparse({ read_message : 1, message : "abcdef" })), a_to_s([0x01, 0xab, 0xcd, 0xef]));
@@ -302,13 +275,13 @@ test("Record that skips some data.", function() {
     same(record.parse(data), { data : "1234" });
     same(a_to_s(record.unparse({ data : "1234" })), a_to_s([0x00, 0x12, 0x34]));
     // Test dynamic skip doesn't move position on
-    record = bitratchet.record({ skipped :  bitratchet.dynamic(function () { }),
+    record = bitratchet.record({ skipped : function () { },
                                  data : bitratchet.hex({ length : 8 * 2 }) });
     same(record.parse(data), { data : "ff12" });
     same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
     same(a_to_s(record.unparse({ data : "FF12", skipped : "test" })), a_to_s([0xff, 0x12]));
     // Test dynamic skip with value doesn't move position on
-    record = bitratchet.record({ skipped :  bitratchet.dynamic(function () { return "WAT"; }),
+    record = bitratchet.record({ skipped :  function () { return "WAT"; },
                                  data : bitratchet.hex({ length : 8 * 2 }) });
     same(record.parse(data), { skipped : "WAT", data : "ff12" });
     same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
