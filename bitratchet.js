@@ -114,11 +114,13 @@ if (!bitratchet) {
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
                             v = v(result);
+                            console.log(v, position);
                         }
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
                                 // It's a primitive so parse the data
                                 field = v.parse(shift_bytes(data, position, v.length));
+                                position += v.length;
                             } else {
                                 // Result was given instead of primitive, just use that
                                 field = v;
@@ -127,7 +129,6 @@ if (!bitratchet) {
                             if (field !== undefined) {
                                 result[k] = field;
                             }
-                            position += v.length;
                         }
                     });
                     this.length = position;
@@ -142,15 +143,17 @@ if (!bitratchet) {
                         if (typeof v === 'function') {
                             v = v(data);
                         }
-                        if (v) {
-                            if (v.hasOwnProperty('unparse')) {
-                                field = v.unparse(data[k])
+                        if (v && v.hasOwnProperty('unparse')) {
+                            field = v.unparse(data[k])
+                            if (field === undefined) {
+                                // We're skipping data as we have a length but no value - zero it
+                                results.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(v.length / 8))),
+                                               length : v.length });
                             } else {
-                                field = v;
-                            }
-                            if (field !== undefined) {
+                                // We have data, add it
                                 results.push({ value : new Uint8Array(field), length : v.length });
                             }
+                            // Either way increase our overall length
                             that.length += v.length;
                         }
                     });

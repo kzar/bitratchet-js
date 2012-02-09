@@ -270,7 +270,7 @@ test("Record containing dynamic primitive that uses record context.", function (
 test("Record that skips some data.", function() {
     var record, data = init_buffer(0xFF, 0x12, 0x34);
     // Test skip primitive works properly
-    record = bitratchet.record({ skipped :  bitratchet.skip({ length : 8 }),
+    record = bitratchet.record({ skipped : bitratchet.skip({ length : 8 }),
                                  data : bitratchet.hex({ length : 8 * 2 }) });
     same(record.parse(data), { data : "1234" });
     same(a_to_s(record.unparse({ data : "1234" })), a_to_s([0x00, 0x12, 0x34]));
