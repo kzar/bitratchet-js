@@ -73,9 +73,9 @@ if (!bitratchet) {
                 return shifted_buffer;
             }
             function assemble_data(fields, length) {
-                var buffer = new ArrayBuffer(Math.ceil(length / 8)),
-                    bytes = new Uint8Array(buffer), i, j, over_spill,
-                    byte_position = 0, bit_position = length % 8;
+                var i, j, over_spill,
+                    buffer = new ArrayBuffer(Math.ceil(length / 8)),
+                    bytes = new Uint8Array(buffer), byte_position = 0, bit_position = length % 8;
 
                 function add_bits(value, length) {
                     // Default to 8 bits for convenience
@@ -91,7 +91,7 @@ if (!bitratchet) {
                         bit_position += length;
                     } else {
                         // We need to spill over onto next byte
-                        over_spill = (length + bit_position) - 8
+                        over_spill = (length + bit_position) - 8;
                         bytes[byte_position] = bytes[byte_position] | (value >> bit_position);
                         bytes[byte_position + 1] = (value << (8 - over_spill)) & 0xff;
                         byte_position += 1;
@@ -114,14 +114,14 @@ if (!bitratchet) {
 
             return {
                 parse : function (data) {
-                    var result = {}, position = 0, bytes;
+                    var result = {}, position = 0;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
                         data = bitratchet.hex({ length : 4 * data.length }).unparse(data);
                     }
                     // Convert ArrayBuffer to int array for processing and begin
                     map_fields(function (k, v) {
-                        var byte_offset, bit_offset, spare_bits, shifted_data, shifted_buffer, i, field;
+                        var field;
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
                             v = v(result);
@@ -145,7 +145,7 @@ if (!bitratchet) {
                     return result;
                 },
                 unparse : function (data) {
-                    var results = [], bytes, buffer, byte_position, bit_offset, that, i, j, field;
+                    var results = [], that, field;
                     // First parse each part collecting the result and it's length
                     this.length = 0;
                     that = this;
@@ -154,7 +154,7 @@ if (!bitratchet) {
                             v = v(data);
                         }
                         if (v && v.hasOwnProperty('unparse')) {
-                            field = v.unparse(data[k])
+                            field = v.unparse(data[k]);
                             if (field === undefined) {
                                 // We're skipping data as we have a length but no value - zero it
                                 results.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(v.length / 8))),
@@ -217,7 +217,7 @@ if (!bitratchet) {
                 return negative ? -number : number;
             }
             function number_to_binary(number, bit_count) {
-                var signed, i, negative, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+                var i, negative, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
                     bytes = new Uint8Array(buffer);
                 // Deal with negative numbers
                 if (number < 0) {
@@ -226,7 +226,7 @@ if (!bitratchet) {
                 }
                 // Loop through other bytes
                 for (i = 0; i < bytes.length; i += 1) {
-                    bytes[bytes.length - 1 - i] = number / Math.pow(2, i * 8) & 0xff
+                    bytes[bytes.length - 1 - i] = number / Math.pow(2, i * 8) & 0xff;
                 }
                 // Sign number if it's negative
                 if (negative) {

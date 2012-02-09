@@ -90,14 +90,12 @@ test("Scaling", function () {
     same(bitratchet.number({ length : 8 * 4, custom_scale : 0.01 }).parse(data), 42783270.39);
     // Scaled signed
     scaled_signed = bitratchet.number({ length : 8 * 4, scale_range : 360, signed : true, precision : 8});
-    console.log("MARK");
     same(scaled_signed.parse(init_buffer(0xfe, 0x28, 0xa6, 0xb9)), -2.58919596);
     same(a_to_s(scaled_signed.unparse(-2.58919596)), a_to_s([0xfe, 0x28, 0xa6, 0xb9]));
 });
 
-test("Large numbers", function() {
+test("Large numbers", function () {
     var data = init_buffer(0xff, 0xff, 0xff, 0xff, 0xff, 0xff);
-    console.log("MARK");
     same(bitratchet.number({ length : 8 * 6 }).parse(data), 281474976710655);
     same(bitratchet.number({ length : 8 * 6, signed : true }).parse(data), -1);
     same(a_to_s(bitratchet.number({ length : 8 * 6 }).unparse(281474976710655)), a_to_s(data));
@@ -109,8 +107,8 @@ module("Others");
 test("Flags", function () {
     // Init everything
     var data = init_buffer(0xff, 0x21),
-    flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black",
-             0, 0, "white", "cyan", "olive", 0, "mauve", "beige"],
+        flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black",
+                 0, 0, "white", "cyan", "olive", 0, "mauve", "beige"],
         values = ["low", "high"],
         colours = bitratchet.flags({ length : 8 * 2, flags : flags, values : values });
     // Run the tests
@@ -173,9 +171,9 @@ test("Lookup", function () {
         }
     );
     same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
-                             table : ["off", "on"] }).parse(data), "on")
+                             table : ["off", "on"] }).parse(data), "on");
     same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
-                             table : ["one", "two", "three", "four"] }).parse(data), "four")
+                             table : ["one", "two", "three", "four"] }).parse(data), "four");
     same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
                              table : ["off", "mistake"],
                              missing : "off" }).parse(data), "off");
@@ -185,7 +183,7 @@ test("Lookup", function () {
                                     table : ["off", "half", "on"] }).unparse("on")), "[0x02]");
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
                                     table : ["off", "half"],
-                                    missing : "off" }).unparse("on")), "[0x00]")
+                                    missing : "off" }).unparse("on")), "[0x00]");
 });
 
 
@@ -248,26 +246,26 @@ test("Nested records with shifting and spare bits", function () {
     same(record.length, 0);
     same(record.parse(data), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
     same(record.length, 17);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" })), a_to_s([0x01, 0xe3, 0xe5]));
+    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" })), a_to_s([0x01, 0xd3, 0xe5]));
     same(record.length, 17);
 });
 
 test("Record containing dynamic primitive that uses record context.", function () {
     var record = bitratchet.record({ read_message : bitratchet.number({ length : 8 }),
                                      message : function (record) {
-                                         if (record.read_message) {
-                                             return bitratchet.hex({ length : 8 * 3 });
-                                         } else {
-                                             return bitratchet.skip({ length : 8 * 3 });
-                                         }
-                                     }});
+                if (record.read_message) {
+                    return bitratchet.hex({ length : 8 * 3 });
+                } else {
+                    return bitratchet.skip({ length : 8 * 3 });
+                }
+            }});
     same(record.parse(init_buffer(0x01, 0xab, 0xcd, 0xef)), { read_message : 1, message : "abcdef" });
     same(record.parse(init_buffer(0x00, 0xab, 0xcd, 0xef)), { read_message : 0 });
     same(a_to_s(record.unparse({ read_message : 1, message : "abcdef" })), a_to_s([0x01, 0xab, 0xcd, 0xef]));
     same(a_to_s(record.unparse({ read_message : 0 })), a_to_s([0x00, 0x00, 0x00, 0x00]));
 });
 
-test("Record that skips some data.", function() {
+test("Record that skips some data.", function () {
     var record, data = init_buffer(0xFF, 0x12, 0x34);
     // Test skip primitive works properly
     record = bitratchet.record({ skipped : bitratchet.skip({ length : 8 }),
