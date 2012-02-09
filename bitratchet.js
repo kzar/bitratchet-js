@@ -64,21 +64,39 @@ if (!bitratchet) {
             }
             function assemble_data(fields, length) {
                 var buffer = new ArrayBuffer(Math.ceil(length / 8)),
-                    bytes = new Uint8Array(buffer), i, j,
-                    position_offset = 0, length_offset = 0;
-                for (i = fields.length - 1; i >= 0; i -= 1) {
-                    position_offset = (length_offset + position_offset) % 8;
-                    length_offset = fields[i].length % 8;
-                    if (position_offset === 0) {
-                        for (j = fields[i].value.length - 1; j >= 0; j -= 1) {
-                            bytes[i + j] = fields[i].value[j];
-                        }
-                        bytes[i + j] = (bytes[i + j] << (8 - length_offset)) & 0xff;
+                    bytes = new Uint8Array(buffer), i, j, over_spill,
+                    byte_position = 0, bit_position = length % 8;
+
+                function add_bits(value, length) {
+                    // Default to 8 bits for convenience
+                    if (length === undefined) {
+                        length = 8;
+                    }
+                    // Mask any excess data
+                    value = value & (Math.pow(2, length) - 1);
+                    // Add the value on to our byte array
+                    if (bit_position + length <= 8) {
+                        // We can fit value into current byte
+                        bytes[byte_position] = bytes[byte_position] | (value << (8 - bit_position - length));
+                        bit_position += length;
                     } else {
-                        for (j = fields[i].value.length - 1; j >= 0; j -= 1) {
-                            bytes[i + j] = bytes[i + j] | (fields[i].value[j] >> position_offset);
-                            bytes[i + j + 1] = (fields[i].value[j] << (8 - position_offset - length_offset)) & 0xff;
-                        }
+                        // We need to spill over onto next byte
+                        over_spill = (length + bit_position) - 8
+                        bytes[byte_position] = bytes[byte_position] | (value >> bit_position);
+                        bytes[byte_position + 1] = (value << (8 - over_spill)) & 0xff;
+                        byte_position += 1;
+                        bit_position = over_spill;
+                    }
+                    // Finally move byte on if we've just finished it
+                    if (bit_position === 8) {
+                        bit_position = 0;
+                        byte_position += 1;
+                    }
+                }
+                for (i = 0; i < fields.length; i += 1) {
+                    add_bits(fields[i].value[0], (fields[i].length % 8 || 8));
+                    for (j = 1; j < fields[i].value.length; j += 1) {
+                        add_bits(fields[i].value[j]);
                     }
                 }
                 return buffer;
@@ -98,18 +116,20 @@ if (!bitratchet) {
                             // For dynamic fields first figure out what our primitive is
                             v = v(result);
                         }
-                        if (v.hasOwnProperty('parse')) {
-                            // It's a primitive so parse the data
-                            field = v.parse(shift_bytes(data, position, v.length));
-                        } else {
-                            // Result was given instead of primitive, just use that
-                            field = v;
+                        if (v) {
+                            if (v.hasOwnProperty('parse')) {
+                                // It's a primitive so parse the data
+                                field = v.parse(shift_bytes(data, position, v.length));
+                            } else {
+                                // Result was given instead of primitive, just use that
+                                field = v;
+                            }
+                            // If field isn't undefined add it to the results
+                            if (field !== undefined) {
+                                result[k] = field;
+                            }
+                            position += v.length;
                         }
-                        // If field isn't undefined add it to the results
-                        if (field !== undefined) {
-                            result[k] = field;
-                        }
-                        position += v.length;
                     });
                     this.length = position;
                     return result;
@@ -123,11 +143,17 @@ if (!bitratchet) {
                         if (typeof v === 'function') {
                             v = v(data);
                         }
-                        field = v.unparse(data[k])
-                        if (field !== undefined) {
-                            results.push({ value : new Uint8Array(field), length : v.length });
+                        if (v) {
+                            if (v.hasOwnProperty('unparse')) {
+                                field = v.unparse(data[k])
+                            } else {
+                                field = v;
+                            }
+                            if (field !== undefined) {
+                                results.push({ value : new Uint8Array(field), length : v.length });
+                            }
+                            that.length += v.length;
                         }
-                        that.length += v.length;
                     });
                     // Now put all those results into an ArrayBuffer and return
                     return assemble_data(results, this.length);
