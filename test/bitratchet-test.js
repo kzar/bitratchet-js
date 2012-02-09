@@ -246,10 +246,10 @@ test("Nested records with shifting and spare bits", function () {
                                                              b : bitratchet.number({ length : 3 }) }),
                                      c : bitratchet.hex({ length : 8 })});
     same(record.length, 0);
-    same(record.parse(data), { a : { a : 0x1 }, b : { a : 0x0, b : 0x4 }, c : "7f" });
-    same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : { a : 0x1 }, b : { a : 0x0, b : 0x4 }, c : "7f" })), a_to_s(data));
-    same(record.length, 8 * 4);
+    same(record.parse(data), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
+    same(record.length, 17);
+    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" })), a_to_s([0x01, 0xe3, 0xe5]));
+    same(record.length, 17);
 });
 
 test("Record containing dynamic primitive that uses record context.", function () {
