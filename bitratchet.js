@@ -31,9 +31,8 @@ if (!bitratchet) {
                 }
             }
             function shift_bytes(buffer, position, length) {
-                // FIXME FIXME FIXME - This function doesn't work correctly!
                 var shifted_buffer, shifted_bytes, i, bytes = new Uint8Array(buffer),
-                position_offset = position % 8, length_offset = length % 8;
+                    position_offset = position % 8, length_offset = length % 8;
                 // First create a view on the bytes we need
                 if (length === 0) {
                     bytes = bytes.subarray(position / 8);
@@ -41,20 +40,50 @@ if (!bitratchet) {
                     bytes = bytes.subarray(position / 8,
                                            position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
                 }
-                shifted_buffer = new ArrayBuffer(Math.ceil(length /8));
+                shifted_buffer = new ArrayBuffer(Math.ceil(length / 8));
                 shifted_bytes = new Uint8Array(shifted_buffer);
-                // Shift bytes
-                for (i = 0; i < shifted_bytes.length; i += 1) {
-                    shifted_bytes[i] = ((bytes[i] << position_offset) & 0xff) | (bytes[i + 1] >> (8 - position_offset));
-                }
-                // Clear extra bits in LSB
+
                 if (length_offset) {
-                    spare_bits = length_offset - position_offset;
-                    shifted_bytes[i] = shifted_bytes[i] & (Math.pow(2, length_offset) - 1);
+                    // Handle MSB
+                    shifted_bytes[0] = (bytes[0] >> (8 - length_offset - position_offset)) & (Math.pow(2, length_offset) - 1);
+                    // Shift the rest
+                    for (i = 1; i < shifted_bytes.length; i += 1) {
+                        shifted_bytes[i] = ((bytes[i - 1] << (length_offset + position_offset)) & 0xff) | (bytes[i] >> (8 - position_offset - length_offset));
+                    }
+                } else if (position_offset) {
+                    for (i = 0; i < shifted_bytes.length; i += 1) {
+                        shifted_bytes[i] = ((bytes[i] << (length_offset + position_offset)) & 0xff) | (bytes[i + 1] >> (8 - position_offset - length_offset));
+                    }
+                } else {
+                    // No offset, we can just copy bytes over
+                    for (i = 0; i < shifted_bytes.length; i += 1) {
+                        shifted_bytes[i] = bytes[i];
+                    }
                 }
-                console.log(length_offset, position_offset, length, bytes, shifted_bytes, (Math.pow(2, 8 - length_offset) - 1));
                 return shifted_buffer;
             }
+            function assemble_data(fields, length) {
+                var buffer = new ArrayBuffer(Math.ceil(length / 8)),
+                    bytes = new Uint8Array(buffer), i, j,
+                    position_offset = 0, length_offset = 0;
+                for (i = fields.length - 1; i >= 0; i -= 1) {
+                    position_offset = (length_offset + position_offset) % 8;
+                    length_offset = fields[i].length % 8;
+                    if (position_offset === 0) {
+                        for (j = fields[i].value.length - 1; j >= 0; j -= 1) {
+                            bytes[i + j] = fields[i].value[j];
+                        }
+                        bytes[i + j] = (bytes[i + j] << (8 - length_offset)) & 0xff;
+                    } else {
+                        for (j = fields[i].value.length - 1; j >= 0; j -= 1) {
+                            bytes[i + j] = bytes[i + j] | (fields[i].value[j] >> position_offset);
+                            bytes[i + j + 1] = (fields[i].value[j] << (8 - position_offset - length_offset)) & 0xff;
+                        }
+                    }
+                }
+                return buffer;
+            }
+
             return {
                 parse : function (data) {
                     var result = {}, position = 0, bytes;
@@ -101,27 +130,7 @@ if (!bitratchet) {
                         that.length += v.length;
                     });
                     // Now put all those results into an ArrayBuffer and return
-                    buffer = new ArrayBuffer(Math.ceil(this.length / 8));
-                    bytes = new Uint8Array(buffer);
-                    bit_offset = 0;
-                    byte_position = 0;
-                    for (i = 0; i <  results.length; i += 1) {
-                        for (j = 0; j < results[i].value.length; j += 1) {
-                            if (bit_offset === 0) {
-                                // No bit offset so copy byte over straight
-                                bytes[byte_position] = results[i].value[j];
-                            } else {
-                                // Take account of bit offset when copying byte over
-                                bytes[byte_position] = bytes[byte_position] | results[i].value[j] >> bit_offset;
-                                if (byte_position + 1 < bytes.length) {
-                                    bytes[byte_position + 1] = results[i].value[j] & bit_offset;
-                                }
-                            }
-                            byte_position += 1;
-                        }
-                        bit_offset = (bit_offset + results[i].length) % 8;
-                    }
-                    return buffer;
+                    return assemble_data(results, this.length);
                 },
                 length: 0
             };
@@ -316,7 +325,6 @@ if (!bitratchet) {
                     var i, hex = '';
                     data = new Uint8Array(data);
                     // Make sure we've been given enough data
-                    console.log(data, options.length);
                     if (data.length * 8 > options.length + 4) {
                         throw "Wrong amount of data given to parse to hex";
                     }
