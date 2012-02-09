@@ -33,30 +33,41 @@ if (!bitratchet) {
             function shift_bytes(buffer, position, length) {
                 var shifted_buffer, shifted_bytes, i, bytes = new Uint8Array(buffer),
                     position_offset = position % 8, length_offset;
-                // First create a view on the bytes we need
                 if (length === 0) {
-                    length = bytes.length * 8 - position_offset;
-                }
-                length_offset = length % 8;
-                bytes = bytes.subarray(position / 8,
-                                       position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
-                shifted_buffer = new ArrayBuffer(Math.ceil(length / 8));
-                shifted_bytes = new Uint8Array(shifted_buffer);
-                if (length_offset) {
-                    // Handle MSB
-                    shifted_bytes[0] = (bytes[0] >> (8 - length_offset - position_offset)) & (Math.pow(2, length_offset) - 1);
-                    // Shift the rest
-                    for (i = 1; i < shifted_bytes.length; i += 1) {
-                        shifted_bytes[i] = ((bytes[i - 1] << (length_offset + position_offset)) & 0xff) | (bytes[i] >> (8 - position_offset - length_offset));
-                    }
-                } else if (position_offset) {
-                    for (i = 0; i < shifted_bytes.length; i += 1) {
-                        shifted_bytes[i] = ((bytes[i] << (length_offset + position_offset)) & 0xff) | (bytes[i + 1] >> (8 - position_offset - length_offset));
+                    // No length so just move bytes on to account for position offset
+                    bytes = bytes.subarray(position / 8);
+                    shifted_buffer = new ArrayBuffer(bytes.length);
+                    shifted_bytes = new Uint8Array(shifted_buffer);
+                    // First move MSB to right position
+                    shifted_bytes[0] = (bytes[0] << position_offset) & 0xff;
+                    // Now move on the rest
+                    for (i = 1; i < bytes.length; i += 1) {
+                        shifted_bytes[i - 1] = shifted_bytes[i - 1] | (bytes[i] >> (8 - position_offset));
+                        shifted_bytes[i] = (bytes[i] << position_offset) & 0xff;
                     }
                 } else {
-                    // No offset, we can just copy bytes over
-                    for (i = 0; i < shifted_bytes.length; i += 1) {
-                        shifted_bytes[i] = bytes[i];
+                    // There's a length so we can do all the work for them :)
+                    length_offset = length % 8;
+                    bytes = bytes.subarray(position / 8,
+                                           position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
+                    shifted_buffer = new ArrayBuffer(Math.ceil(length / 8));
+                    shifted_bytes = new Uint8Array(shifted_buffer);
+                    if (length_offset) {
+                        // Handle MSB
+                        shifted_bytes[0] = (bytes[0] >> (8 - length_offset - position_offset)) & (Math.pow(2, length_offset) - 1);
+                        // Shift the rest
+                        for (i = 1; i < shifted_bytes.length; i += 1) {
+                            shifted_bytes[i] = ((bytes[i - 1] << (length_offset + position_offset)) & 0xff) | (bytes[i] >> (8 - position_offset - length_offset));
+                        }
+                    } else if (position_offset) {
+                        for (i = 0; i < shifted_bytes.length; i += 1) {
+                            shifted_bytes[i] = ((bytes[i] << (length_offset + position_offset)) & 0xff) | (bytes[i + 1] >> (8 - position_offset - length_offset));
+                        }
+                    } else {
+                        // No offset, we can just copy bytes over
+                        for (i = 0; i < shifted_bytes.length; i += 1) {
+                            shifted_bytes[i] = bytes[i];
+                        }
                     }
                 }
                 return shifted_buffer;
@@ -114,7 +125,6 @@ if (!bitratchet) {
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
                             v = v(result);
-                            console.log(v, position);
                         }
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
