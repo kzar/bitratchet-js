@@ -32,17 +32,16 @@ if (!bitratchet) {
             }
             function shift_bytes(buffer, position, length) {
                 var shifted_buffer, shifted_bytes, i, bytes = new Uint8Array(buffer),
-                    position_offset = position % 8, length_offset = length % 8;
+                    position_offset = position % 8, length_offset;
                 // First create a view on the bytes we need
                 if (length === 0) {
-                    bytes = bytes.subarray(position / 8);
-                } else {
-                    bytes = bytes.subarray(position / 8,
-                                           position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
+                    length = bytes.length * 8 - position_offset;
                 }
+                length_offset = length % 8;
+                bytes = bytes.subarray(position / 8,
+                                       position / 8 + Math.ceil((length + length_offset + position_offset) / 8));
                 shifted_buffer = new ArrayBuffer(Math.ceil(length / 8));
                 shifted_bytes = new Uint8Array(shifted_buffer);
-
                 if (length_offset) {
                     // Handle MSB
                     shifted_bytes[0] = (bytes[0] >> (8 - length_offset - position_offset)) & (Math.pow(2, length_offset) - 1);
