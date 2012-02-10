@@ -167,7 +167,7 @@ test("Lookup", function () {
                                 table : [] }).unparse(data);
         },
         function (err) {
-            return err === "Value given not in lookup-table."
+            return err === "Value given not in lookup-table.";
         }
     );
     // Usually table is an array
@@ -257,7 +257,7 @@ test("Nested records with shifting and spare bits", function () {
     same(record.length, undefined);
     same(record.parse(data, store), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
     same(store.length, 17);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" }, store)), a_to_s([0x01, 0xd3, 0xe5]));
+    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" }, store)), a_to_s([0x01, 0xe3, 0xe5]));
     same(store.length, 17);
 });
 

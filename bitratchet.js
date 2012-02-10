@@ -64,7 +64,7 @@ if (!bitratchet) {
             function assemble_data(fields, length) {
                 var i, j, over_spill,
                     buffer = new ArrayBuffer(Math.ceil(length / 8)),
-                    bytes = new Uint8Array(buffer), byte_position = 0, bit_position = length % 8;
+                    bytes = new Uint8Array(buffer), byte_position = 0, bit_position = 8 - (length % 8 || 8);
 
                 function add_bits(value, length) {
                     // Default to 8 bits for convenience
@@ -81,7 +81,7 @@ if (!bitratchet) {
                     } else {
                         // We need to spill over onto next byte
                         over_spill = (length + bit_position) - 8;
-                        bytes[byte_position] = bytes[byte_position] | (value >> bit_position);
+                        bytes[byte_position] = bytes[byte_position] | (value >> over_spill);
                         bytes[byte_position + 1] = (value << (8 - over_spill)) & 0xff;
                         byte_position += 1;
                         bit_position = over_spill;
@@ -284,12 +284,14 @@ if (!bitratchet) {
             function value_index(o, value, missing_value) {
                 var key, missing_key, found;
                 for (key in o) {
-                    if (o[key] === value) {
-                        return { index : key, found : true};
-                    }
-                    if (o[key] === missing_value) {
-                        missing_key = key;
-                        found = true;
+                    if (o.hasOwnProperty(key)) {
+                        if (o[key] === value) {
+                            return { index : key, found : true};
+                        }
+                        if (o[key] === missing_value) {
+                            missing_key = key;
+                            found = true;
+                        }
                     }
                 }
                 return { index : missing_key, found : found};
@@ -304,7 +306,7 @@ if (!bitratchet) {
                     }
                 },
                 unparse : function (data) {
-                    var index, result, find_result, found;
+                    var result, find_result;
                     find_result = value_index(options.table, data, options.missing);
                     if (find_result.found) {
                         result = options.type.unparse(find_result.index);
