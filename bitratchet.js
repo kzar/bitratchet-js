@@ -113,7 +113,7 @@ if (!bitratchet) {
             }
 
             return {
-                parse : function (data) {
+                parse : function (data, store) {
                     var result = {}, position = 0;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
@@ -121,7 +121,7 @@ if (!bitratchet) {
                     }
                     // Convert ArrayBuffer to int array for processing and begin
                     map_fields(function (k, v) {
-                        var field;
+                        var field, field_store;
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
                             v = v(result);
@@ -129,8 +129,16 @@ if (!bitratchet) {
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
                                 // It's a primitive so parse the data
-                                field = v.parse(shift_bytes(data, position, v.length));
-                                position += v.length;
+                                if (v.length) {
+                                    // Static field, parse normally
+                                    field = v.parse(shift_bytes(data, position, v.length));
+                                    position += v.length;
+                                } else {
+                                    // Dynamic field, parse and take note of length
+                                    field_store = {};
+                                    field = v.parse(shift_bytes(data, position, 0), field_store);
+                                    position += field_store.length;
+                                }
                             } else {
                                 // Result was given instead of primitive, just use that
                                 field = v;
@@ -141,36 +149,47 @@ if (!bitratchet) {
                             }
                         }
                     });
-                    this.length = position;
+                    if (store) {
+                        store.length = position;
+                    }
                     return result;
                 },
-                unparse : function (data) {
-                    var results = [], that, field;
+                unparse : function (data, store) {
+                    var fields = [], field, field_store, field_length, record_length = 0;
                     // First parse each part collecting the result and it's length
-                    this.length = 0;
-                    that = this;
                     map_fields(function (k, v) {
                         if (typeof v === 'function') {
                             v = v(data);
                         }
                         if (v && v.hasOwnProperty('unparse')) {
-                            field = v.unparse(data[k]);
+                            if (v.length) {
+                                // Static field
+                                field = v.unparse(data[k]);
+                                field_length = v.length;
+                            } else {
+                                // Dynamic field
+                                field_store = {};
+                                field = v.unparse(data[k], field_store);
+                                field_length = field_store.length;
+                            }
                             if (field === undefined) {
                                 // We're skipping data as we have a length but no value - zero it
-                                results.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(v.length / 8))),
-                                               length : v.length });
+                                fields.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(field_length / 8))),
+                                               length : field_length });
                             } else {
                                 // We have data, add it
-                                results.push({ value : new Uint8Array(field), length : v.length });
+                                fields.push({ value : new Uint8Array(field), length : field_length });
                             }
                             // Either way increase our overall length
-                            that.length += v.length;
+                            record_length += field_length;
                         }
                     });
-                    // Now put all those results into an ArrayBuffer and return
-                    return assemble_data(results, this.length);
-                },
-                length: 0
+                    // Now put all those fields into an ArrayBuffer and return
+                    if (store) {
+                        store.length = record_length;
+                    }
+                    return assemble_data(fields, record_length);
+                }
             };
         };
     }

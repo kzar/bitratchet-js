@@ -192,12 +192,13 @@ module("Record");
 test("Basic", function () {
     var data = init_buffer(0x11, 0x12, 0xFF, 0x1),
         record = bitratchet.record({ a : bitratchet.number({ length : 8 }),
-                                     b : bitratchet.hex({ length : 8 * 3 })});
-    same(record.length, 0);
-    same(record.parse(data), { a : 0x11, b : "12ff01" });
-    same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x11, b : "12ff01" })), a_to_s(data));
-    same(record.length, 8 * 4);
+                                     b : bitratchet.hex({ length : 8 * 3 })}),
+        store = {};
+    same(record.length, undefined);
+    same(record.parse(data, store), { a : 0x11, b : "12ff01" });
+    same(store.length, 8 * 4);
+    same(a_to_s(record.unparse({ a : 0x11, b : "12ff01" }, store)), a_to_s(data));
+    same(store.length, 8 * 4);
 });
 
 test("Dynamic lengths", function () {
@@ -205,36 +206,39 @@ test("Dynamic lengths", function () {
         record = bitratchet.record({ a : function () {
             return bitratchet.number({ length : 8 * 2 });
         },
-                                     b : bitratchet.hex({ length : 8 * 2 })});
-    same(record.length, 0);
-    same(record.parse(data), { a : 0x1112, b : "ff01" });
-    same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x1112, b : "ff01" })), a_to_s(data));
-    same(record.length, 8 * 4);
+                                     b : bitratchet.hex({ length : 8 * 2 })}),
+        store = {};
+    same(record.length, undefined);
+    same(record.parse(data, store), { a : 0x1112, b : "ff01" });
+    same(store.length, 8 * 4);
+    same(a_to_s(record.unparse({ a : 0x1112, b : "ff01" }, store)), a_to_s(data));
+    same(store.length, 8 * 4);
 });
 
 test("Nested records", function () {
     var data = init_buffer(0x11, 0x12, 0xff, 0x1),
         record = bitratchet.record({ a : bitratchet.record({ a : bitratchet.number({ length : 8 }),
                                                              b : bitratchet.number({ length : 8 }) }),
-                                     b : bitratchet.hex({ length : 8 * 2 })});
-    same(record.length, 0);
-    same(record.parse(data), { a : { a : 0x11, b: 0x12}, b : "ff01" });
-    same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : { a : 0x11, b: 0x12}, b : "ff01" })), a_to_s(data));
-    same(record.length, 8 * 4);
+                                     b : bitratchet.hex({ length : 8 * 2 })}),
+        store = {};
+    same(record.length, undefined);
+    same(record.parse(data, store), { a : { a : 0x11, b: 0x12}, b : "ff01" });
+    same(store.length, 8 * 4);
+    same(a_to_s(record.unparse({ a : { a : 0x11, b: 0x12}, b : "ff01" }, store)), a_to_s(data));
+    same(store.length, 8 * 4);
 });
 
 test("Bit shifting", function () {
     var data = init_buffer(0x01, 0xf2, 0xff, 0x1f),
         record = bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                      b : bitratchet.hex({ length : 8 }),
-                                     c : bitratchet.number({ length : 21 })});
-    same(record.length, 0);
-    same(record.parse(data), { a : 0x0, b : "0f", c : 0x12ff1f });
-    same(record.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f })), a_to_s(data));
-    same(record.length, 8 * 4);
+                                     c : bitratchet.number({ length : 21 })}),
+        store = {};
+    same(record.length, undefined);
+    same(record.parse(data, store), { a : 0x0, b : "0f", c : 0x12ff1f });
+    same(store.length, 8 * 4);
+    same(a_to_s(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f }, store)), a_to_s(data));
+    same(store.length, 8 * 4);
 });
 
 test("Nested records with shifting and spare bits", function () {
@@ -242,12 +246,13 @@ test("Nested records with shifting and spare bits", function () {
         record = bitratchet.record({ a : bitratchet.record({ a : bitratchet.number({ length : 3 }) }),
                                      b : bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                                              b : bitratchet.number({ length : 3 }) }),
-                                     c : bitratchet.hex({ length : 8 })});
-    same(record.length, 0);
-    same(record.parse(data), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
-    same(record.length, 17);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" })), a_to_s([0x01, 0xd3, 0xe5]));
-    same(record.length, 17);
+                                     c : bitratchet.hex({ length : 8 })}),
+        store = {};
+    same(record.length, undefined);
+    same(record.parse(data, store), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
+    same(store.length, 17);
+    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" }, store)), a_to_s([0x01, 0xd3, 0xe5]));
+    same(store.length, 17);
 });
 
 test("Record containing dynamic primitive that uses record context.", function () {

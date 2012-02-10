@@ -33,8 +33,8 @@ The primitive object that's returned must follow these rules:
 
  - It must contain a `parse` field containing a function that expects data in a ArrayBuffer (or a function to obtain said data if dynamic) and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
- - It must contain a length field containing a number specifying - in bits - how large the primtive is. If the primitive is of a static length this should be set immediately, if the primtive is of dynamic length it should be initially set to 0 and then adjusted by the parse and unparse functions.
- - If the primitive is dynamic and initially has a length of 0 it must be able to handle trailing data correctly itself. (Like the record primitive has to.)
+ - It should contain a length field containing a number specifying - in bits - how large the primtive is. If the length field is omitted the primitive is considered of dynmaic length.
+ - Dynamic length primitives are only necissary when the primitive's length varies depending on _its own value_. They are only necissary for records and other advanced situations. Dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
  - If the primtive's length is not divisible by 8 it should ignore any spare bits.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown. (With the - heh - exception of being given too much data, that should always be handled but the excess just ignored.)
 
