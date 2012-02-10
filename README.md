@@ -4,17 +4,17 @@ bitratchet-js
 This library is work in progress, don't attempt to use it yet. - Dave
 ---------------------------------------------------------------------
 
-A Javascript library for processing binary data, similar to BinData for Ruby and taking ideas from my earlier (much more limited) PHP library.
+A Javascript library for processing binary data, similar to [BinData for Ruby](http://bindata.rubyforge.org/) and taking ideas from my earlier (much more limited) [BitRatchet PHP library](https://github.com/kzar/bit-ratchet).
 
-Makes use of the new ArrayBuffer Javascript feature and allows for simple (yet flexible) parsing and "unparsing" of binary data.
+Makes use of the [new ArrayBuffer feature](https://github.com/kzar/bit-ratchet) in Javascript and allows for simple (yet flexible) parsing and "unparsing" of binary data.
 Features include:
 
- - Avoid duplicate code, you only have to specify records once as with BinData. (Normally you end up writing double the code when you need to generate messages as well as read them.)
+ - Avoid duplicate code, you only have to specify records once as with [BinData](http://bindata.rubyforge.org/). (Normally you end up writing double the code when you need to generate messages as well as read them.)
  - Deal transparently with bit (as opposed to byte) based fields, shifting is completely taken care of - as with the PHP BitRatchet.
- - Handle dynamic fields that can vary in length and structure. Dynamic fields can vary based on any context at the time of parsing or unparsing the data.
+ - Handle dynamic fields that can vary in length and structure based on any context of the data already parsed. (Fields can even vary in length based on their own value but shifting is no longer handled automatically in that one, extreme situation.)
  - Build your own flexible primtives that can extend the library to your problem domain. They can fully leverage the provided primitives.
 
-Developed to aid parsing of a implementing a commerical telematics messaging protocol in Javascript.
+Developed to help implement a commerical telematics messaging protocol in Javascript.
 
 Usage
 -----
@@ -28,15 +28,15 @@ For now look at the tests to see how it works, sorry I'll document more soon.
 Primitives
 ----------
 
-Primitives are used to parse individual fields, they are functions return a primitive object based on the options passed.
-The primitive object that's returned must follow these rules:
+Primitives are used to parse individual fields, often they are provided by a function that takes some options and returns the primitive object.
+The primitive object must follow these rules:
 
- - It must contain a `parse` field containing a function that expects data in a ArrayBuffer (or a function to obtain said data if dynamic) and returns the parsed information.
+ - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
  - It should contain a length field containing a number specifying - in bits - how large the primtive is. If the length field is omitted the primitive is considered of dynmaic length.
- - Dynamic length primitives are only necissary when the primitive's length varies depending on _its own value_. They are only necissary for records and other advanced situations. Dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
+ - Dynamic length primitives are only necissary when the primitive's length varies depending on _its own value_. They are only necissary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a bit length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
  - If the primtive's length is not divisible by 8 it should ignore any spare bits.
- - If the primitive is created with invalid options, or used with invalid data an exception should be thrown. (With the - heh - exception of being given too much data, that should always be handled but the excess just ignored.)
+ - If the primitive is created with invalid options, or used with invalid data an exception should be thrown.
 
 Included primitives:
 
