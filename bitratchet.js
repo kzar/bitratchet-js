@@ -9,17 +9,6 @@ if (!bitratchet) {
 (function () {
     "use strict";
 
-    function a_index(a, item) {
-        var i;
-        for (i = 0; i < a.length; i += 1) {
-            if (a[i] === item) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
             function map_fields(f) {
@@ -292,6 +281,19 @@ if (!bitratchet) {
 
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
+            function value_index(o, value, missing_value) {
+                var key, missing_key, found;
+                for (key in o) {
+                    if (o[key] === value) {
+                        return { index : key, found : true};
+                    }
+                    if (o[key] === missing_value) {
+                        missing_key = key;
+                        found = true;
+                    }
+                }
+                return { index : missing_key, found : found};
+            }
             return {
                 parse : function (data) {
                     var index = options.type.parse(data);
@@ -302,20 +304,16 @@ if (!bitratchet) {
                     }
                 },
                 unparse : function (data) {
-                    var index, result;
-                    index = a_index(options.table, data);
-                    index = index > -1 ? index : a_index(options.table, options.missing);
-                    if (index > -1) {
-                        result = options.type.unparse(index);
+                    var index, result, find_result, found;
+                    find_result = value_index(options.table, data, options.missing);
+                    if (find_result.found) {
+                        result = options.type.unparse(find_result.index);
                         this.length = options.type.length;
                         return result;
+                    } else {
+                        // We couldn't find value given in lookup table
+                        throw "Value given not in lookup-table.";
                     }
-                    if (options.type.length === 0) {
-                        // Result was missing and lookup type is dynamic so we can't
-                        // know what the length should be. Throw an exception.
-                        throw "Lookup can't handle missing values when unparsing if the type is dynamic!";
-                    }
-                    return 0;
                 },
                 length : options.type.length
             };
@@ -329,6 +327,15 @@ if (!bitratchet) {
             }
             function current_bit(i) {
                 return 7 - i % 8;
+            }
+            function a_index(a, item) {
+                var i;
+                for (i = 0; i < a.length; i += 1) {
+                    if (a[i] === item) {
+                        return i;
+                    }
+                }
+                return -1;
             }
             return {
                 parse : function (data) {

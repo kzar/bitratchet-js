@@ -163,13 +163,14 @@ test("Lookup", function () {
     var data = init_buffer(0xff);
     raises(
         function () {
-            bitratchet.lookup({ type : function () { },
+            bitratchet.lookup({ type : bitratchet.number({ length: 8}),
                                 table : [] }).unparse(data);
         },
         function (err) {
-            return err === "Lookup can't handle missing values when unparsing if the type is dynamic!";
+            return err === "Value given not in lookup-table."
         }
     );
+    // Usually table is an array
     same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
                              table : ["off", "on"] }).parse(data), "on");
     same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
@@ -184,6 +185,11 @@ test("Lookup", function () {
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
                                     table : ["off", "half"],
                                     missing : "off" }).unparse("on")), "[0x00]");
+    // Sometimes table might an object
+    same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
+                             table : { 0 : "off", 1 : "on"} }).parse(data), "on");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
+                                    table : { 0 : "off", 1 : "on"} }).unparse("on")), "[0x01]");
 });
 
 
