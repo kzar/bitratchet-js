@@ -10,11 +10,11 @@ Makes use of the [new ArrayBuffer feature](https://github.com/kzar/bit-ratchet) 
 Features include:
 
  - Avoid duplicate code, you only have to specify records once as with [BinData](http://bindata.rubyforge.org/). (Normally you end up writing double the code when you need to generate messages as well as read them.)
- - Deal transparently with bit (as opposed to byte) based fields, shifting is completely taken care of - as with the PHP BitRatchet.
+ - Deal transparently with bit (as opposed to byte) based fields, shifting is completely taken care of - as with the [PHP BitRatchet library](https://github.com/kzar/bit-ratchet).
  - Handle dynamic fields that can vary in length and structure based on any context of the data already parsed. (Fields can even vary in length based on their own value but shifting is no longer handled automatically in that one, extreme situation.)
- - Build your own flexible primtives that can extend the library to your problem domain. They can fully leverage the provided primitives.
+ - Build your own flexible primitives that can extend the library to your problem domain. They can fully leverage the provided primitives.
 
-Developed to help implement a commerical telematics messaging protocol in Javascript.
+Developed to help implement a commercial telematics messaging protocol in Javascript.
 
 Usage
 -----
@@ -33,9 +33,9 @@ The primitive object must follow these rules:
 
  - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
- - It should contain a length field containing a number specifying - in bits - how large the primtive is. If the length field is omitted the primitive is considered of dynmaic length.
- - Dynamic length primitives are only necissary when the primitive's length varies depending on _its own value_. They are only necissary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a bit length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
- - If the primtive's length is not divisible by 8 it should ignore any spare bits.
+ - It should contain a length field containing a number specifying - in bits - how large the primitive is. If the length field is omitted the primitive is considered of dynmaic length.
+ - Dynamic length primitives are only necessary when the primitive's length varies depending on _its own value_. They are only necessary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a bit length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
+ - If the primitive's length is not divisible by 8 the parse function should ignore any extra bits (left at the MSB end of the first and MSB byte) and the unparse function should take care to zero them.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown.
 
 Included primitives:
@@ -51,7 +51,7 @@ Included primitives:
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
       }
 
- - `record` a really important primtive used to group primitives, detailed in it's own section below.
+ - `record` a really important primitive used to group primitives, detailed in it's own section below.
  - `flags` a useful primitive for handling bit flags, you provide an array of flag names and values an object is given in return. __Note that skipped bits are left low when unparsed.__
 
       Expected options:
@@ -61,12 +61,12 @@ Included primitives:
         values : Array of values, for example ["false", "true"] or ["off", "on"]
       }
 
- - `dynamic` a flexible primtiive that just expects a function. The function given must return another primitive and can make use of the previously read fields in a record and the data.
+ - `dynamic` a flexible primitive that just expects a function. The function given must return another primitive and can make use of the previously read fields in a record and the data.
 
       Expected options:
       function that returns a primitive based on the context.
 
- - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundries however.)
+ - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundaries however.)
 
       Expected options:
       {
@@ -77,7 +77,7 @@ Included primitives:
 
       Expected options:
       {
-        type : Primtive used to parse the lookup index, should be a number
+        type : Primitive used to parse the lookup index, should be a number
         table : Array of values, table[type.parse(data)] is used to parse a value
         missing : Default value when table doesn't contain given index. Note - must be present in table
       }
@@ -100,7 +100,7 @@ Records are created with a structure object, for example:
         hex : bitratchet.hex({ length : 8 })
      });
 
- - Each field's value should either be a primtive or a function that takes the current record context and returns one.
+ - Each field's value should either be a primitive or a function that takes the current record context and returns one.
  - During parsing if a primitive returns `undefined` it's data will be skipped.
  - During parsing if a primitive returns anything else without the `parse` property the value returned will be used for the field.
 
