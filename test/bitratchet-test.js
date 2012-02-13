@@ -137,10 +137,10 @@ test("Hex", function () {
     );
     raises(
         function () {
-            bitratchet.hex({ length : 4 }).parse(data);
+            bitratchet.hex({ length : 8 * 5 }).parse(data);
         },
         function (err) {
-            return err === "Wrong amount of data given to parse to hex";
+            return err === "Too little data given to parse to hex.";
         }
     );
     raises(
@@ -153,10 +153,14 @@ test("Hex", function () {
     );
     // Test that good input gives right result
     same(bitratchet.hex({ length : 8 * 4 }).parse(data), "deadbeef");
-    same(bitratchet.hex({ length : 8 * 4 - 4 }).parse(data), "deadbee");
-    same(bitratchet.hex({ length : 8 * 4 - 4 }).length, 8 * 4 - 4);
     same(a_to_s(bitratchet.hex({ length : 8 * 4 }).unparse("deadbeef")), a_to_s(data));
-    same(a_to_s(bitratchet.hex({ length : 8 * 4 - 4 }).unparse("deadbeef")), a_to_s([0xde, 0xad, 0xbe, 0xe0]));
+    // Test we can handle nibbles too
+    same(bitratchet.hex({ length : 8 * 4 - 4 }).parse(data), "eadbeef");
+    same(bitratchet.hex({ length : 8 * 4 - 4 }).length, 8 * 4 - 4);
+    same(a_to_s(bitratchet.hex({ length : 8 * 4 - 4 }).unparse("deadbeef")), a_to_s([0x0e, 0xad, 0xbe, 0xef]));
+    same(a_to_s(bitratchet.hex({ length : 8 * 4 - 4 }).unparse("eadbeef")), a_to_s([0x0e, 0xad, 0xbe, 0xef]));
+    same(bitratchet.hex({ length : 4 }).parse(data), "f");
+    same(a_to_s(bitratchet.hex({ length : 4 }).unparse("f")), a_to_s([0xf]));
 });
 
 test("Lookup", function () {

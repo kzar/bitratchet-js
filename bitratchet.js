@@ -389,25 +389,20 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var i, hex = '';
-                    data = new Uint8Array(data);
+                    data = new Uint8Array(data)
                     // Make sure we've been given enough data
-                    if (data.length * 8 > options.length + 4) {
-                        throw "Wrong amount of data given to parse to hex";
+                    if (options.length > data.length * 8) {
+                        throw "Too little data given to parse to hex.";
                     }
-                    // Parse to hex
+                    // Parse all bytes to hex
                     for (i = 0; i < data.length; i += 1) {
-                        if (i * 8 > options.length - 8) {
-                            // If we're on last nibble ignore extra nibble
-                            hex += (data[i] >> 4).toString(16);
-                        } else {
-                            // Otherwise add full padded byte
-                            if (data[i] < 0x10) {
-                                hex += "0";
-                            }
-                            hex += data[i].toString(16);
+                        if (data[i] < 0x10) {
+                            hex += "0";
                         }
+                        hex += data[i].toString(16);
                     }
-                    return hex;
+                    // Return right amount of the hex
+                    return hex.substr(hex.length - options.length / 4);
                 },
                 unparse : function (data) {
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
@@ -416,15 +411,19 @@ if (!bitratchet) {
                     var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
                         bytes = new Uint8Array(buffer);
                     // Chunk hex
+                    if (data.length % 2) {
+                        data = '0' + data;
+                    }
                     data = data.match(/.{1,2}/g);
                     // Convert to byte array
                     for (i = 0; i < bytes.length; i += 1) {
-                        if (i * 8 > options.length - 8) {
-                            bytes[i] = parseInt(data[i], 16) & 0xf0;
-                        } else {
-                            bytes[i] = parseInt(data[i], 16);
-                        }
+                        bytes[i] = parseInt(data[i], 16);
                     }
+                    // Mask spare nibble if we have one
+                    if (options.length % 8) {
+                        bytes[0] = bytes[0] & 0xf;
+                    }
+                    // Return
                     return buffer;
                 },
                 length : options.length
