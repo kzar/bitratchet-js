@@ -82,6 +82,15 @@ Included primitives:
         missing : Default value when table doesn't contain given index. Note - must be present in table
       }
 
+ - String - a primitive you can use to deal with strings contained within the binary data. Fixed length and character dynamic length charater terminated strings are supported.
+
+      Expected options:
+      {
+        length : Length of the string in bits, must be divisible by 8! If terminator option isn't present this is required, otherwise it's optional.
+        terminator : ASCII character code (as integer) for the terminating character, required if length option isn't present. (Length will include terminating character if relevant.)
+        read_full_length : If length and terminator options are present this option modifies the behavoir. If `true` the full length of the string will be read, just the extra characters past the terminating character dropped. If `false` and we read the terminating character before reaching the length the remaining data wont be skipped. If `false` and we read 'till the end of length the behavoir is as normal.
+      }
+
 Records
 -------
 

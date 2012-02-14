@@ -279,6 +279,49 @@ if (!bitratchet) {
         }());
     }
 
+    if (typeof bitratchet.string !== 'function') {
+        bitratchet.string = function string(options) {
+            // Helper functions
+            function buffer_to_string(buffer) {
+                var i, chars = [], bytes = new Uint8Array(buffer);
+                // Iterate through data we're using converting ascii to characters
+                bytes = bytes.subarray(0, options.length / 8);
+                for (i = 0; i < bytes.length; i += 1) {
+                    chars[i] = String.fromCharCode(bytes[i])
+                }
+                // Join characters into a single string and return
+                return chars.join("").toLowerCase();
+            }
+            // Validate options
+            if (options.length && options.length % 8) {
+                throw "Invalid length, must be divisible by 8.";
+            }
+            if (!options.length && options.terminator === undefined) {
+                throw "String needs either a length or terminating character.";
+            }
+            if (options.read_full_length && !(options.terminator !== undefined && options.length)) {
+                throw "read_full_length option required both length and terminator options.";
+            }
+            // Return the string primitive
+            return {
+                parse : function (data) {
+                    if (this.length) {
+                        // The string is of static length
+                        return buffer_to_string(data);
+                    }
+                },
+                unparse : function (data) {
+                    return new ArrayBuffer(1);
+                },
+                length : (function () {
+                    if (options.length && (options.terminator === undefined || options.read_full_length)) {
+                        return options.length;
+                    }
+                }());
+            }
+        }
+    }
+
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
             function value_index(o, value, missing_value) {

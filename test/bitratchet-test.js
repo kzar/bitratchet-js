@@ -104,6 +104,70 @@ test("Large numbers", function () {
 
 module("Others");
 
+test("String", function () {
+    var data = init_buffer(0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x50, 0x00, 0x51, 0x52),
+        string;
+    // Length must be divisible by 8 if present
+    raises(
+        function () {
+            bitratchet.string({ length : 5 });
+        },
+        function (err) {
+            return err === "Invalid length, must be divisible by 8.";
+        }
+    );
+    // Terminator option or length option must be present
+    raises(
+        function () {
+            bitratchet.string({ });
+        },
+        function (err) {
+            return err === "String needs either a length or terminating character.";
+        }
+    );
+    // If read_full_length is true terminator and length must be present
+    raises(
+        function () {
+            bitratchet.string({ length : 8, read_full_length : true });
+        },
+        function (err) {
+            return err === "read_full_length option required both length and terminator options.";
+        }
+    );
+
+    // Test strings with a fixed length
+    string = bitratchet.string({ length : 8 * 5 });
+    same(string.parse(data), "abcde");
+    same(string.length, 8 * 5);
+    same(a_to_s(string.unparse("abcde")), [0x41, 0x42, 0x43, 0x44, 0x45]);
+    same(string.length, 8 * 5);
+    // Test strings with terminating character and dynamic length
+    string = bitratchet.string({ terminator : 0x00 });
+    same(string.parse(data), "abcdefghij");
+    same(string.length, 8 * "abcdefghij\0".length);
+    same(a_to_s(string.unparse("abcdefghij")), a_to_s([0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x50, 0x00]));
+    same(string.length, 8 * "abcdefghij\0".length);
+    // Test strings with terminating character and max length
+    string = bitratchet.string({ terminator : 0x00, length : 8 * 3 });
+    same(string.parse(data), "abc");
+    same(string.length, 8 * "abc".length);
+    same(a_to_s(string.unparse("abc")), a_to_s([0x41, 0x42, 0x43]));
+    same(string.length, 8 * "abc".length);
+    string = bitratchet.string({ terminator : 0x00, length : 8 * 20 });
+    same(string.parse(data), "abcdefghij");
+    same(string.length, 8 * "abcdefghij\0".length);
+    same(a_to_s(string.unparse("abcdefghij")), a_to_s([0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x50, 0x00]));
+    same(string.length, 8 * "abcdefghij\0".length)
+    // Test string with terminating character and min length
+    string = bitratchet.string({ terminator : 0x00, length : 8 * 12, read_full_length : true });
+    same(string.parse(data), "abcdefghij\0");
+    same(string.length, 8 * 12);
+    same(a_to_s(string.unparse("abcdefghij")), a_to_s([0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x50, 0x00, 0x00]));
+    same(string.length, 8 * 12);
+    same(a_to_s(string.unparse("abcdefghij\0")), a_to_s([0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x50, 0x00, 0x00]));
+    same(string.length, 8 * 12);
+});
+
 test("Flags", function () {
     // Init everything
     var data = init_buffer(0xff, 0x21),
