@@ -374,7 +374,7 @@ test("Record containing dynamic primitive that uses record context.", function (
 test("Nested record with dynamic primitive that uses parent's context.", function () {
     var data, record = bitratchet.record({ header : bitratchet.record({ length : bitratchet.number({ length : 8 }) }),
                                            payload : bitratchet.record({ data : function (record) {
-                                               return bitratchet.string({ length : record.header.length });
+                                               return bitratchet.string({ length : record.header.length * 8 });
                                            }})}),
         store = { };
     data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);

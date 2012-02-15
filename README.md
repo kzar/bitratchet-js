@@ -116,6 +116,8 @@ Records are created with a structure object, for example:
 
 Note - for convenience record.parse can accept a hex string instead of a proper ArrayBuffer of data.
 
+Note - Records pass their state to each other inside the store, in the `parent` and `parent_field_name` keys. This is so that primitive returning functions have access to the parent record's state in nested records.
+
 License
 -------
 Copyright Dave Barker 2012

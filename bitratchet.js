@@ -113,7 +113,12 @@ if (!bitratchet) {
                         var field, field_store;
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
-                            v = v(result);
+                            if (store && store.parent && store.parent_field_name) {
+                                store.parent[store.parent_field_name] = result;
+                                v = v(store.parent);
+                            } else {
+                                v = v(result);
+                            }
                         }
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
@@ -124,7 +129,7 @@ if (!bitratchet) {
                                     position += v.length;
                                 } else {
                                     // Dynamic field, parse and take note of length
-                                    field_store = {};
+                                    field_store = { parent : result, parent_field_name : k};
                                     field = v.parse(shift_bytes(data, position, 0), field_store);
                                     position += field_store.length;
                                 }
@@ -148,7 +153,12 @@ if (!bitratchet) {
                     // First parse each part collecting the result and it's length
                     map_fields(function (k, v) {
                         if (typeof v === 'function') {
-                            v = v(data);
+                            if (store && store.parent && store.parent_field_name) {
+                                store.parent[store.parent_field_name] = data;
+                                v = v(store.parent);
+                            } else {
+                                v = v(data);
+                            }
                         }
                         if (v && v.hasOwnProperty('unparse')) {
                             if (v.length) {
@@ -157,7 +167,7 @@ if (!bitratchet) {
                                 field_length = v.length;
                             } else {
                                 // Dynamic field
-                                field_store = {};
+                                field_store = { parent : data, parent_field_name : k };
                                 field = v.unparse(data[k], field_store);
                                 field_length = field_store.length;
                             }
