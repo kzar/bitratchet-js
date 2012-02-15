@@ -280,46 +280,75 @@ if (!bitratchet) {
     }
 
     if (typeof bitratchet.string !== 'function') {
-        bitratchet.string = function string(options) {
-            // Helper functions
-            function buffer_to_string(buffer) {
-                var i, chars = [], bytes = new Uint8Array(buffer);
-                // Iterate through data we're using converting ascii to characters
-                bytes = bytes.subarray(0, options.length / 8);
-                for (i = 0; i < bytes.length; i += 1) {
-                    chars[i] = String.fromCharCode(bytes[i])
+        (function () {
+            bitratchet.string = function string(options) {
+                // Helper functions
+                function buffer_to_string(buffer) {
+                    var i, chars = [], bytes = new Uint8Array(buffer);
+                    // Convert byte-array to array of character strings
+                    for (i = 0; i < bytes.length; i += 1) {
+                        chars[i] = String.fromCharCode(bytes[i]);
+                    }
+                    // Join characters into a single string and return
+                    console.log(chars);
+                    return chars.join("");
                 }
-                // Join characters into a single string and return
-                return chars.join("").toLowerCase();
-            }
-            // Validate options
-            if (options.length && options.length % 8) {
-                throw "Invalid length, must be divisible by 8.";
-            }
-            if (!options.length && options.terminator === undefined) {
-                throw "String needs either a length or terminating character.";
-            }
-            if (options.read_full_length && !(options.terminator !== undefined && options.length)) {
-                throw "read_full_length option required both length and terminator options.";
-            }
-            // Return the string primitive
-            return {
-                parse : function (data) {
-                    if (this.length) {
-                        // The string is of static length
-                        return buffer_to_string(data);
+                function string_to_buffer(s) {
+                    var i, buffer = new ArrayBuffer(s.length),
+                    bytes = new Uint8Array(buffer);
+                    console.log(s);
+                    for (i = 0; i < s.length; i += 1) {
+                        bytes[i] = s.charCodeAt(i);
                     }
-                },
-                unparse : function (data) {
-                    return new ArrayBuffer(1);
-                },
-                length : (function () {
-                    if (options.length && (options.terminator === undefined || options.read_full_length)) {
-                        return options.length;
-                    }
-                }());
-            }
-        }
+                    return buffer;
+                }
+                // Validate options
+                if (options.length && options.length % 8) {
+                    throw "Invalid length, must be divisible by 8.";
+                }
+                if (!options.length && options.terminator === undefined) {
+                    throw "String needs either a length or terminating character.";
+                }
+                if (options.read_full_length && !(options.terminator !== undefined && options.length)) {
+                    throw "read_full_length option required both length and terminator options.";
+                }
+                // Return the string primitive
+                return {
+                    parse : function (data, store) {
+                        var end, result, dynamic_length;
+                        // Convert buffer to string
+                        result = buffer_to_string(data);
+                        // If string is of static length we can return
+                        if (this.length) {
+                            return result.substr(0, options.length / 8);
+                        }
+                        // Otherwise we need to figure out it's length
+                        end = result.search(String.fromCharCode(options.terminator));
+                        if (end === -1) {
+                            if (options.length) {
+                                end = options.length / 8;
+                            } else {
+                                throw "Unterminated string, provide a length.";
+                            }
+                        }
+                        if (store) {
+                            store.length = options.read_full_length ? options.length : (end + 1) * 8;
+                        }
+                        console.log([result, options.terminator, end, new Uint8Array(data)]);
+                        // Then read it as normal
+                        return result.substr(0, end + 1);
+                    },
+                    unparse : function (data) {
+                        return string_to_buffer(data);
+                    },
+                    length : (function () {
+                        if (options.length && (options.terminator === undefined || options.read_full_length)) {
+                            return options.length;
+                        }
+                    }())
+                };
+            };
+        }());
     }
 
     if (typeof bitratchet.lookup !== 'function') {
@@ -432,7 +461,7 @@ if (!bitratchet) {
             return {
                 parse : function (data) {
                     var i, hex = '';
-                    data = new Uint8Array(data)
+                    data = new Uint8Array(data);
                     // Make sure we've been given enough data
                     if (options.length > data.length * 8) {
                         throw "Too little data given to parse to hex.";
