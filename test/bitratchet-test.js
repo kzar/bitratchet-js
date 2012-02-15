@@ -122,7 +122,7 @@ test("String", function () {
             bitratchet.string({ });
         },
         function (err) {
-            return err === "String needs either a length or terminating character.";
+            return err === "String needs either a length, terminating character or to be a pascal string.";
         }
     );
     // If read_full_length is true terminator and length must be present
@@ -142,6 +142,17 @@ test("String", function () {
         },
         function (err) {
             return err === "Unterminated string, provide a length.";
+        }
+    );
+    // Pascal strings aren't compatible with other types
+    raises(
+        function () {
+            bitratchet.string({ pascal : true, length : 8 });
+            bitratchet.string({ pascal : true, terminator : 0x00 });
+            bitratchet.string({ pascal : true, read_full_length : true, length : 8, terminator : 0x00 });
+        },
+        function (err) {
+            return err === "Pascal strings don't support the other options.";
         }
     );
     // Test strings with a fixed length
@@ -175,6 +186,13 @@ test("String", function () {
     same(string.length, 8 * 12);
     same(a_to_s(string.unparse("abcdefghij\u0000")), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x00]));
     same(string.length, 8 * 12);
+    // Test pascal strings
+    data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
+    string = bitratchet.string({ pascal : true });
+    same(string.parse(data, store), "abc");
+    same(store.length, 8 * 4);
+    same(a_to_s(string.unparse("abc", store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
+    same(store.length, 8 * 4);
 });
 
 test("Flags", function () {

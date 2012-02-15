@@ -305,8 +305,11 @@ if (!bitratchet) {
                 if (options.length && options.length % 8) {
                     throw "Invalid length, must be divisible by 8.";
                 }
-                if (!options.length && options.terminator === undefined) {
-                    throw "String needs either a length or terminating character.";
+                if (!options.length && options.terminator === undefined && !options.pascal) {
+                    throw "String needs either a length, terminating character or to be a pascal string.";
+                }
+                if (options.pascal && (options.terminator !== undefined || options.length)) {
+                    throw "Pascal strings don't support the other options.";
                 }
                 if (options.read_full_length && !(options.terminator !== undefined && options.length)) {
                     throw "read_full_length option required both length and terminator options.";
@@ -317,6 +320,13 @@ if (!bitratchet) {
                         var end, result, length_hit = false;
                         // Convert buffer to string
                         result = buffer_to_string(data);
+                        // Firstly deal with pascal strings
+                        if (options.pascal) {
+                            if (store) {
+                                store.length = (result.charCodeAt(0) + 1) * 8;
+                            }
+                            return result.substr(1, result.charCodeAt(0));
+                        }
                         // If string is of static length we can return
                         if (this.length) {
                             if (options.terminator !== undefined) {
@@ -348,7 +358,16 @@ if (!bitratchet) {
                     },
                     unparse : function (data, store) {
                         var buffer;
-                        // First make sure string is terminated if it should be
+                        // First handle pascal strings
+                        if (options.pascal) {
+                            data = String.fromCharCode(data.length) + data;
+                            if (store) {
+                                store.length = data.length * 8;
+                            }
+                            return string_to_buffer(data, data.length);
+                        }
+
+                        // Next make sure string is terminated if it should be
                         if (options.terminator !== undefined &&
                                 (!options.length || data.length * 8 < options.length) &&
                                 data.search(String.fromCharCode(options.terminator)) === -1) {
