@@ -314,7 +314,7 @@ if (!bitratchet) {
                 // Return the string primitive
                 return {
                     parse : function (data, store) {
-                        var end, result, dynamic_length, length_hit = false;
+                        var end, result, length_hit = false;
                         // Convert buffer to string
                         result = buffer_to_string(data);
                         // If string is of static length we can return
@@ -347,11 +347,11 @@ if (!bitratchet) {
                         return result.substr(0, end);
                     },
                     unparse : function (data, store) {
-                        var length, buffer;
+                        var buffer;
                         // First make sure string is terminated if it should be
                         if (options.terminator !== undefined &&
-                            (!options.length || data.length * 8 < options.length) &&
-                            data.search(String.fromCharCode(options.terminator)) == -1) {
+                                (!options.length || data.length * 8 < options.length) &&
+                                data.search(String.fromCharCode(options.terminator)) === -1) {
                             data += String.fromCharCode(options.terminator);
                         }
                         // Convert to buffer

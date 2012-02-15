@@ -105,8 +105,8 @@ test("Large numbers", function () {
 module("Others");
 
 test("String", function () {
-    var data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c),
-        string, store = {};
+    var string, store = {},
+        data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
     // Length must be divisible by 8 if present
     raises(
         function () {
@@ -137,7 +137,7 @@ test("String", function () {
     // If length isn't provided terminator must be found
     raises(
         function () {
-            string = bitratchet.string({ terminator : "\0" });
+            string = bitratchet.string({ terminator : "\u0000" });
             string.parse(init_buffer(0x61, 0x62));
         },
         function (err) {
@@ -166,7 +166,7 @@ test("String", function () {
     same(string.parse(data, store), "abcdefghij");
     same(store.length, 8 * "abcdefghij\u0000".length);
     same(a_to_s(string.unparse("abcdefghij", store)), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
-    same(store.length, 8 * "abcdefghij\u0000".length)
+    same(store.length, 8 * "abcdefghij\u0000".length);
     // Test string with terminating character and min length
     string = bitratchet.string({ terminator : 0x00, length : 8 * 12, read_full_length : true });
     same(string.parse(data), "abcdefghij\u0000");
