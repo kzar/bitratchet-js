@@ -371,6 +371,19 @@ test("Record containing dynamic primitive that uses record context.", function (
     same(a_to_s(record.unparse({ read_message : 0 })), a_to_s([0x00, 0x00, 0x00, 0x00]));
 });
 
+test("Nested record with dynamic primitive that uses parent's context.", function () {
+    var data, record = bitratchet.record({ header : bitratchet.record({ length : bitratchet.number({ length : 8 }) }),
+                                           payload : bitratchet.record({ data : function (record) {
+                                               return bitratchet.string({ length : record.header.length });
+                                           }})}),
+        store = { };
+    data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
+    same(record.parse(data, store), { header : { length : 3 }, payload : { data : "abc" } })
+    same(store.length, 8 * 4);
+    same(a_to_s(record.unparse({ header : { length : 3 }, payload : { data : "abc" } }, store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
+    same(store.length, 8 * 4);
+});
+
 test("Record that skips some data.", function () {
     var record, data = init_buffer(0xFF, 0x12, 0x34);
     // Test skip primitive works properly
