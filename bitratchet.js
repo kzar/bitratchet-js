@@ -290,14 +290,13 @@ if (!bitratchet) {
                         chars[i] = String.fromCharCode(bytes[i]);
                     }
                     // Join characters into a single string and return
-                    console.log(chars);
                     return chars.join("");
                 }
-                function string_to_buffer(s) {
-                    var i, buffer = new ArrayBuffer(s.length),
-                    bytes = new Uint8Array(buffer);
-                    console.log(s);
-                    for (i = 0; i < s.length; i += 1) {
+                function string_to_buffer(s, length) {
+                    var i, buffer = new ArrayBuffer(length),
+                        bytes = new Uint8Array(buffer);
+
+                    for (i = 0; i < bytes.length; i += 1) {
                         bytes[i] = s.charCodeAt(i);
                     }
                     return buffer;
@@ -315,14 +314,21 @@ if (!bitratchet) {
                 // Return the string primitive
                 return {
                     parse : function (data, store) {
-                        var end, result, dynamic_length;
+                        var end, result, dynamic_length, length_hit = false;
                         // Convert buffer to string
                         result = buffer_to_string(data);
                         // If string is of static length we can return
                         if (this.length) {
-                            return result.substr(0, options.length / 8);
+                            if (options.terminator !== undefined) {
+                                end = result.search(String.fromCharCode(options.terminator));
+                            }
+                            if (options.terminator !== undefined && end > -1) {
+                                return result.substr(0, end + 1);
+                            } else {
+                                return result.substr(0, options.length / 8);
+                            }
                         }
-                        // Otherwise we need to figure out it's length
+                        // Otherwise we need to figure out its length
                         end = result.search(String.fromCharCode(options.terminator));
                         if (end === -1) {
                             if (options.length) {
@@ -330,16 +336,34 @@ if (!bitratchet) {
                             } else {
                                 throw "Unterminated string, provide a length.";
                             }
+                        } else if (end > options.length / 8) {
+                            end = options.length / 8;
+                            length_hit = true;
                         }
                         if (store) {
-                            store.length = options.read_full_length ? options.length : (end + 1) * 8;
+                            store.length = (options.read_full_length || length_hit) ? options.length : (end + 1) * 8;
                         }
-                        console.log([result, options.terminator, end, new Uint8Array(data)]);
                         // Then read it as normal
-                        return result.substr(0, end + 1);
+                        return result.substr(0, end);
                     },
-                    unparse : function (data) {
-                        return string_to_buffer(data);
+                    unparse : function (data, store) {
+                        var length, buffer;
+                        // First make sure string is terminated if it should be
+                        if (options.terminator !== undefined &&
+                            (!options.length || data.length * 8 < options.length) &&
+                            data.search(String.fromCharCode(options.terminator)) == -1) {
+                            data += String.fromCharCode(options.terminator);
+                        }
+                        // Convert to buffer
+                        buffer = string_to_buffer(data, this.length / 8 ||
+                                                  data.search(String.fromCharCode(options.terminator)) + 1 ||
+                                                  options.length / 8);
+                        // Take note of length
+                        if (!this.length && store) {
+                            store.length = buffer.byteLength * 8;
+                        }
+                        // and return
+                        return buffer;
                     },
                     length : (function () {
                         if (options.length && (options.terminator === undefined || options.read_full_length)) {
