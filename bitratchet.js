@@ -315,7 +315,6 @@ if (!bitratchet) {
                 if (options.length && options.length % 8) {
                     throw "Invalid length, must be divisible by 8.";
                 }
-                console.log(options);
                 if (!options.length && options.terminator === undefined && !options.pascal) {
                     throw "String needs either a length, terminating character or to be a pascal string.";
                 }

@@ -105,8 +105,7 @@ test("Large numbers", function () {
 module("String");
 
 test("Validation", function () {
-    var string, store = {},
-        data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
+    var string;
     // Length must be divisible by 8 if present
     raises(
         function () {
@@ -173,7 +172,7 @@ test("Basic", function () {
     same(store.length, 8 * "abcdefghij\u0000".length);
     same(a_to_s(string.unparse("abcdefghij", store)), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
     same(store.length, 8 * "abcdefghij\u0000".length);
-})
+});
 
 test("Advanced", function () {
     var string, store = {},
@@ -394,11 +393,11 @@ test("Record containing dynamic primitive that uses record context.", function (
 test("Nested record with dynamic primitive that uses parent's context.", function () {
     var data, record = bitratchet.record({ header : bitratchet.record({ length : bitratchet.number({ length : 8 }) }),
                                            payload : bitratchet.record({ data : function (record) {
-                                               return bitratchet.string({ length : record.header.length * 8 });
-                                           }})}),
+            return bitratchet.string({ length : record.header.length * 8 });
+        }})}),
         store = { };
     data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
-    same(record.parse(data, store), { header : { length : 3 }, payload : { data : "abc" } })
+    same(record.parse(data, store), { header : { length : 3 }, payload : { data : "abc" } });
     same(store.length, 8 * 4);
     same(a_to_s(record.unparse({ header : { length : 3 }, payload : { data : "abc" } }, store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
     same(store.length, 8 * 4);
