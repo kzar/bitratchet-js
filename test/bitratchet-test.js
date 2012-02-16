@@ -102,9 +102,9 @@ test("Large numbers", function () {
     same(a_to_s(bitratchet.number({ length : 8 * 6, signed : true }).unparse(-1)), a_to_s(data));
 });
 
-module("Others");
+module("String");
 
-test("String", function () {
+test("Validation", function () {
     var string, store = {},
         data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
     // Length must be divisible by 8 if present
@@ -155,6 +155,12 @@ test("String", function () {
             return err === "Pascal strings don't support the other options.";
         }
     );
+});
+
+test("Basic", function () {
+    var string, store = {},
+        data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
+
     // Test strings with a fixed length
     string = bitratchet.string({ length : 8 * 5 });
     same(string.parse(data), "abcde");
@@ -167,6 +173,12 @@ test("String", function () {
     same(store.length, 8 * "abcdefghij\u0000".length);
     same(a_to_s(string.unparse("abcdefghij", store)), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
     same(store.length, 8 * "abcdefghij\u0000".length);
+})
+
+test("Advanced", function () {
+    var string, store = {},
+        data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
+
     // Test strings with terminating character and max length
     string = bitratchet.string({ terminator : 0x00, length : 8 * 3 });
     same(string.parse(data, store), "abc");
@@ -180,12 +192,18 @@ test("String", function () {
     same(store.length, 8 * "abcdefghij\u0000".length);
     // Test string with terminating character and min length
     string = bitratchet.string({ terminator : 0x00, length : 8 * 12, read_full_length : true });
-    same(string.parse(data), "abcdefghij\u0000");
+    same(string.parse(data), "abcdefghij");
     same(string.length, 8 * 12);
     same(a_to_s(string.unparse("abcdefghij")), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x00]));
     same(string.length, 8 * 12);
     same(a_to_s(string.unparse("abcdefghij\u0000")), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x00]));
     same(string.length, 8 * 12);
+});
+
+test("Pascal", function () {
+    var string, store = {},
+        data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
+
     // Test pascal strings
     data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
     string = bitratchet.string({ pascal : true });
@@ -194,6 +212,8 @@ test("String", function () {
     same(a_to_s(string.unparse("abc", store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
     same(store.length, 8 * 4);
 });
+
+module("Others");
 
 test("Flags", function () {
     // Init everything
