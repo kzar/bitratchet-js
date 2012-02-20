@@ -449,6 +449,11 @@ if (!bitratchet) {
 
     if (typeof bitratchet.flags !== 'function') {
         bitratchet.flags = function flags(options) {
+            var simple_values;
+            function is_array(a) {
+                return a && typeof (a) === 'object' &&
+                       a.constructor === Array;
+            }
             function current_byte(i) {
                 return Math.floor(i / 8);
             }
@@ -464,26 +469,31 @@ if (!bitratchet) {
                 }
                 return -1;
             }
+            // First check if we've got a 2d array of values or just a standard array
+            simple_values = (options.values.length === 2 &&
+                             !(is_array(options.values[0]) || is_array(options.values[1])));
             return {
                 parse : function (data) {
-                    var i, results = {};
+                    var i, flag, results = {};
                     data = new Uint8Array(data);
                     // Next assemble the result
                     for (i = 0; i < options.length; i += 1) {
                         if (options.flags[i]) {
                             // Select correct byte, then bit and use it to add result value
-                            results[options.flags[i]] = options.values[data[current_byte(i)] >> current_bit(i) & 1];
+                            flag = data[current_byte(i)] >> current_bit(i) & 1;
+                            results[options.flags[i]] = simple_values ? options.values[flag] : options.values[i][flag];
                         }
                     }
                     return results;
                 },
                 unparse : function (data) {
-                    var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
+                    var i, flag, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
                         bytes = new Uint8Array(buffer);
                     // Work through flags ORing their values onto relevant byte
                     for (i = 0; i < options.flags.length; i += 1) {
                         if (options.flags[i]) {
-                            bytes[current_byte(i)] = bytes[current_byte(i)] | (a_index(options.values, data[options.flags[i]]) << current_bit(i));
+                            flag = a_index((simple_values ? options.values : options.values[i]), data[options.flags[i]]) << current_bit(i);
+                            bytes[current_byte(i)] = bytes[current_byte(i)] | flag;
                         }
                     }
                     return buffer;

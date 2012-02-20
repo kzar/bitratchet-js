@@ -232,6 +232,14 @@ test("Flags", function () {
                                   red : "high", purple : "high", black : "high",
                                   white : "high", cyan : "low", olive : "low",
                                   mauve : "low", beige : "high" })), a_to_s([0x6f, 0x21]));
+    // Test two dimensional value arrays
+    values = [0, ["low", "high"], ["small", "big"], 0, ["off", "on"], ["false", "true"],
+              ["disabled", "enabled"], ["off", "on"]];
+    colours = bitratchet.flags({ length : 8, flags : flags.slice(0, 8), values : values });
+    same(colours.parse(init_buffer(0x0f)), { blue : "low", yellow : "small", green : "on", red : "true",
+                                purple : "enabled", black : "on" });
+    same(a_to_s(colours.unparse({ blue : "low", yellow : "small", green : "on", red : "true",
+                                  purple : "enabled", black : "on" })), a_to_s([0x0f]));
 });
 
 test("Hex", function () {
@@ -404,7 +412,7 @@ test("Nested record with dynamic primitive that uses parent's context.", functio
 });
 
 test("Record that skips some data.", function () {
-    var record, data = init_buffer(0xFF, 0x12, 0x34);
+    var record, data = init_buffer(0xff, 0x12, 0x34);
     // Test skip primitive works properly
     record = bitratchet.record({ skipped : bitratchet.skip({ length : 8 }),
                                  data : bitratchet.hex({ length : 8 * 2 }) });
@@ -423,3 +431,17 @@ test("Record that skips some data.", function () {
     same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
     same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" })), a_to_s([0xff, 0x12]));
 });
+
+/*test("Record that takes a parameter for state.", function () {
+    var record, data = init_buffer(0x07);
+    // Set up our primtive takes a multiplier
+    function 
+    // Simple test
+    record = bitratchet.record({
+        value : function (record, state) {
+            if (state && state.multiplier) {
+                return 
+        
+    // Nested test
+    var record, data 
+});*/

@@ -58,7 +58,7 @@ Included primitives:
       {
         length : Length in bits of raw data.
         flags : Array of flags, falsey to skip / ignore, e.g. ["blue", 0, "red", "yellow"], should be of same length as length option above.
-        values : Array of values, for example ["false", "true"] or ["off", "on"]
+        values : Array of values, for example ["false", "true"] or ["off", "on"]. (Can also be a two-dimensional array if each field needs a different value, e.g. [["false", "true"], ["off", "on"]].)
       }
 
  - `dynamic` a flexible primitive that just expects a function. The function given must return another primitive and can make use of the previously read fields in a record and the data.
