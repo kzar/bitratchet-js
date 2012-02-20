@@ -240,6 +240,12 @@ test("Flags", function () {
                                 purple : "enabled", black : "on" });
     same(a_to_s(colours.unparse({ blue : "low", yellow : "small", green : "on", red : "true",
                                   purple : "enabled", black : "on" })), a_to_s([0x0f]));
+    // Another two dimensional test
+    colours = bitratchet.flags({ length : 4, flags : ["blue", "yellow", "green", "red"],
+                                 values : [["low", "high"], ["off", "on"],
+                                           ["false", "true"], ["no", "yes"]] });
+    same(colours.parse(init_buffer(0x04)), { blue : "low", yellow : "on", green : "false", red : "no" })
+    same(a_to_s(colours.unparse({ blue : "low", yellow : "on", green : "false", red : "no" })), a_to_s([0x04]));
 });
 
 test("Hex", function () {

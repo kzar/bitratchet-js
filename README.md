@@ -121,7 +121,7 @@ Note - Records pass their state to each other inside the store, in the `parent` 
 Extending
 ---------
 
-Bitratchet is easy to extend, you can make your own primitives with total flexibility to suit your needs whilst still leveraging the provided ones. (Refer to the list of rules primtives must abide to in the primtive section above when creating your own.)
+Bitratchet is easy to extend, you can make your own primitives with total flexibility to suit your needs whilst still leveraging the provided tools. (Refer to the list of rules primtives must abide to in the primtive section above when creating your own.)
 
 For example here's a timestamp primtive that makes use of the number primitive to easily parse timestamps in the data:
 
