@@ -118,6 +118,43 @@ Note - for convenience record.parse can accept a hex string instead of a proper 
 
 Note - Records pass their state to each other inside the store, in the `parent` and `parent_field_name` keys. This is so that primitive returning functions have access to the parent record's state in nested records.
 
+Extending
+---------
+
+Bitratchet is easy to extend, you can make your own primitives with total flexibility to suit your needs whilst still leveraging the provided ones. (Refer to the list of rules primtives must abide to in the primtive section above when creating your own.)
+
+For example here's a timestamp primtive that makes use of the number primitive to easily parse timestamps in the data:
+
+      function timestamp(options) {
+          return {
+              parse : function (data) {
+                  return new Date(bitratchet.number(options).parse(data) * 1000);
+              },
+              unparse : function (data) {
+                  return bitratchet.number(options).unparse(typeof data === 'string' ? Date.parse(data) : data.getTime() / 1000);
+              },
+              length : options.length
+          };
+      }
+
+Here's another example, this time for parsing IP address':
+
+      function ip_address() {
+          return {
+              parse : function (data) {
+                  var i, ip = "", bytes = new Uint8Array(data);
+                  for (i = 0; i < bytes.length; i += 1) {
+                      ip += bytes[i].toString(10) + ".";
+                  }
+                  return ip.slice(0, -1);
+              },
+              unparse : function (data) {
+                  return bitratchet.hex({ length : 8 * 4 }).unparse(data.replace(/\./g, ""));
+              },
+              length : 8 * 4
+          };
+      }
+
 License
 -------
 Copyright Dave Barker 2012
