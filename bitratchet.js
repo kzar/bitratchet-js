@@ -449,7 +449,7 @@ if (!bitratchet) {
 
     if (typeof bitratchet.flags !== 'function') {
         bitratchet.flags = function flags(options) {
-            var simple_values;
+            var simple_values, bit_offset = options.length % 8;
             function is_array(a) {
                 return a && typeof (a) === 'object' &&
                        a.constructor === Array;
@@ -480,7 +480,7 @@ if (!bitratchet) {
                     for (i = 0; i < options.length; i += 1) {
                         if (options.flags[i]) {
                             // Select correct byte, then bit and use it to add result value
-                            flag = data[current_byte(i)] >> current_bit(i) & 1;
+                            flag = data[current_byte(i + bit_offset)] >> current_bit(i + bit_offset) & 1;
                             results[options.flags[i]] = simple_values ? options.values[flag] : options.values[i][flag];
                         }
                     }
@@ -492,8 +492,8 @@ if (!bitratchet) {
                     // Work through flags ORing their values onto relevant byte
                     for (i = 0; i < options.flags.length; i += 1) {
                         if (options.flags[i]) {
-                            flag = a_index((simple_values ? options.values : options.values[i]), data[options.flags[i]]) << current_bit(i);
-                            bytes[current_byte(i)] = bytes[current_byte(i)] | flag;
+                            flag = a_index((simple_values ? options.values : options.values[i]), data[options.flags[i]]) << current_bit(i + bit_offset);
+                            bytes[current_byte(i + bit_offset)] = bytes[current_byte(i + bit_offset)] | flag;
                         }
                     }
                     return buffer;

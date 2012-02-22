@@ -241,6 +241,7 @@ test("Flags", function () {
     same(a_to_s(colours.unparse({ blue : "low", yellow : "small", green : "on", red : "true",
                                   purple : "enabled", black : "on" })), a_to_s([0x0f]));
     // Another two dimensional test
+    console.log("MARK");
     colours = bitratchet.flags({ length : 4, flags : ["blue", "yellow", "green", "red"],
                                  values : [["low", "high"], ["off", "on"],
                                            ["false", "true"], ["no", "yes"]] });
