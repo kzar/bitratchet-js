@@ -102,6 +102,13 @@ test("Large numbers", function () {
     same(a_to_s(bitratchet.number({ length : 8 * 6, signed : true }).unparse(-1)), a_to_s(data));
 });
 
+test("Defaults", function () {
+    same(a_to_s(bitratchet.number({ length : 8, missing : 4 }).unparse(undefined)),
+         "[0x04]");
+    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return 3; } })).unparse(undefined),
+         "[0x03]");
+});
+
 module("String");
 
 test("Validation", function () {
@@ -212,9 +219,16 @@ test("Pascal", function () {
     same(store.length, 8 * 4);
 });
 
-module("Others");
+test("Defaults", function () {
+    same(a_to_s(bitratchet.number({ length : 8 * 5, missing : "abcde" }).unparse(undefined)),
+         "[0x61, 0x62, 0x63, 0x64, 0x65]");
+    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return "abcde"; } })).unparse(undefined),
+         "[0x61, 0x62, 0x63, 0x64, 0x65]");
+});
 
-test("Flags", function () {
+module("Flags");
+
+test("Simple", function () {
     // Init everything
     var data = init_buffer(0xff, 0x21),
         flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black",
@@ -232,22 +246,50 @@ test("Flags", function () {
                                   red : "high", purple : "high", black : "high",
                                   white : "high", cyan : "low", olive : "low",
                                   mauve : "low", beige : "high" })), a_to_s([0x6f, 0x21]));
+});
+
+test("Advanced", function () {
     // Test two dimensional value arrays
-    values = [0, ["low", "high"], ["small", "big"], 0, ["off", "on"], ["false", "true"],
-              ["disabled", "enabled"], ["off", "on"]];
-    colours = bitratchet.flags({ length : 8, flags : flags.slice(0, 8), values : values });
+    var flags = [0, "blue", "yellow", 0, "green", "red", "purple", "black"],
+        values = [0, ["low", "high"], ["small", "big"], 0, ["off", "on"], ["false", "true"],
+                  ["disabled", "enabled"], ["off", "on"]],
+        colours = bitratchet.flags({ length : 8, flags : flags, values : values });
     same(colours.parse(init_buffer(0x0f)), { blue : "low", yellow : "small", green : "on", red : "true",
                                 purple : "enabled", black : "on" });
     same(a_to_s(colours.unparse({ blue : "low", yellow : "small", green : "on", red : "true",
                                   purple : "enabled", black : "on" })), a_to_s([0x0f]));
     // Another two dimensional test
-    console.log("MARK");
     colours = bitratchet.flags({ length : 4, flags : ["blue", "yellow", "green", "red"],
                                  values : [["low", "high"], ["off", "on"],
                                            ["false", "true"], ["no", "yes"]] });
-    same(colours.parse(init_buffer(0x04)), { blue : "low", yellow : "on", green : "false", red : "no" })
+    same(colours.parse(init_buffer(0x04)), { blue : "low", yellow : "on", green : "false", red : "no" });
     same(a_to_s(colours.unparse({ blue : "low", yellow : "on", green : "false", red : "no" })), a_to_s([0x04]));
 });
+
+test("Defaults", function () {
+    same(a_to_s(bitratchet.number({ length : 4,
+                                    flags : ["red", "blue", "yellow", "green"],
+                                    values : ["off", "on"],
+                                    missing : ["off", "off", "on", "off"] }).unparse(undefined)),
+         "[0x02]");
+    same(a_to_s(bitratchet.number({ length : 4,
+                                    flags : ["red", "blue", "yellow", "green"],
+                                    values : ["off", "on"],
+                                    missing : function () { return ["off", "off", "on", "off"]; } }).unparse(undefined)),
+         "[0x02]");
+    same(a_to_s(bitratchet.number({ length : 4,
+                                    flags : ["red", "blue", "yellow", "green"],
+                                    values : [["off", "on"], ["false", "on"], ["off", "on"], ["false", "on"]],
+                                    missing : ["off", "false", "off", "true"] }).unparse(undefined)),
+         "[0x01]");
+    same(a_to_s(bitratchet.number({ length : 4,
+                                    flags : ["red", "blue", "yellow", "green"],
+                                    values : [["off", "on"], ["false", "on"], ["off", "on"], ["false", "on"]],
+                                    missing : function () { return ["off", "false", "off", "on"]; } }).unparse(undefined)),
+         "[0x01]");
+});
+
+module("Hex");
 
 test("Hex", function () {
     var data = init_buffer(0xde, 0xad, 0xbe, 0xef);
@@ -288,6 +330,15 @@ test("Hex", function () {
     same(a_to_s(bitratchet.hex({ length : 4 }).unparse("f")), a_to_s([0xf]));
 });
 
+test("Defaults", function () {
+    same(a_to_s(bitratchet.hex({ length : 8 * 5, missing : "0102030a0b" }).unparse(undefined)),
+         "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
+    same(a_to_s(bitratchet.number({ length : 8 * 5, missing : function () { return "0102030a0b"; } })).unparse(undefined),
+         "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
+});
+
+module("Lookup");
+
 test("Lookup", function () {
     var data = init_buffer(0xff);
     raises(
@@ -321,6 +372,14 @@ test("Lookup", function () {
                                     table : { 0 : "off", 1 : "on"} }).unparse("on")), "[0x01]");
 });
 
+test("Defaults", function () {
+    same(a_to_s(bitratchet.hex({ type : bitratchet.number({ length : 8 }),
+                                 table : ["hipity", "hop", "you don't stop", "boogy"],
+                                 missing : "boogy" }).parse(undefined)), "[0x03]");
+    same(a_to_s(bitratchet.hex({ type : bitratchet.number({ length : 8 }),
+                                 table : ["hipity", "hop", "you don't stop", "boogy"],
+                                 missing : function () { return "boogy"; } }).parse(undefined)), "[0x03]");
+});
 
 module("Record");
 
@@ -439,16 +498,27 @@ test("Record that skips some data.", function () {
     same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" })), a_to_s([0xff, 0x12]));
 });
 
-/*test("Record that takes a parameter for state.", function () {
-    var record, data = init_buffer(0x07);
-    // Set up our primtive takes a multiplier
-    function 
-    // Simple test
-    record = bitratchet.record({
-        value : function (record, state) {
-            if (state && state.multiplier) {
-                return 
-        
-    // Nested test
-    var record, data 
-});*/
+test("Nested record with defaults", function () {
+    var data = {
+        a : 1,
+        b : {
+            // c : "false"
+        }
+    }, record = bitratchet.record({
+        a : bitratchet.number({ length : 8 }),
+        b : bitratchet.record({
+            c : bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
+                                    table : ["false", "true"],
+                                    missing : function (record) {
+                    return record.a === 2 ? "true" : "false";
+                } })
+        })
+    });
+    // Test defaults work properly
+    same(a_to_s(record.unparse(data)), "[0x01, 0x00]");
+    data.a = 2;
+    same(a_to_s(record.unparse(data)), "[0x02, 0x01]");
+    // Test defaults aren't used it we have data
+    data.b.c = "false";
+    same(a_to_s(record.unparse(data)), "[0x02, 0x00]");
+});

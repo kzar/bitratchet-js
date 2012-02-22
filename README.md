@@ -37,6 +37,7 @@ The primitive object must follow these rules:
  - Dynamic length primitives are only necessary when the primitive's length varies depending on _its own value_. They are only necessary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must accept an optional second parameter called store and they must populate the store object - if given - with a bit length after processing the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
  - If the primitive's length is not divisible by 8 the parse function should ignore any extra bits (left at the MSB end of the first and MSB byte) and the unparse function should take care to zero them.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown.
+ - By convention primtives should accept a `missing` option when it's possible the primitive's value will be omitted, the option could contain a value or a function to be called. The missing option is then used by the unparse function when the value is undefined.
 
 Included primitives:
 
@@ -49,6 +50,7 @@ Included primitives:
         precision : Decimal place precision to round to. (Default is no rounding.)
         scale_range : If the number is scaled to a range provide the range. (The same as providing a custom_scale of Math.pow(2, options.length) / options.scale_range)
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
+        missing : Default value or function to calculate default value given record context.
       }
 
  - `record` a really important primitive used to group primitives, detailed in it's own section below.
@@ -59,18 +61,15 @@ Included primitives:
         length : Length in bits of raw data.
         flags : Array of flags, falsey to skip / ignore, e.g. ["blue", 0, "red", "yellow"], should be of same length as length option above.
         values : Array of values, for example ["false", "true"] or ["off", "on"]. (Can also be a two-dimensional array if each field needs a different value, e.g. [["false", "true"], ["off", "on"]].)
+        missing : Default value or function to calculate default value given record context.
       }
-
- - `dynamic` a flexible primitive that just expects a function. The function given must return another primitive and can make use of the previously read fields in a record and the data.
-
-      Expected options:
-      function that returns a primitive based on the context.
 
  - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundaries however.)
 
       Expected options:
       {
         length : Length of hex to read in bits, must be divisible by 4.
+        missing : Default value or function to calculate default value given record context.
       }
 
  - Lookup - a simple primitive you can use to parse "lookup table" entries, it accepts a data type (should be number), table array of values and optionally a missing value for situations where the table doesn't contain the value provided.
@@ -90,6 +89,7 @@ Included primitives:
         terminator : ASCII character code (as integer) for the terminating character, required if length option isn't present. (Length will include terminating character if relevant.)
         read_full_length : If length and terminator options are present this option modifies the behavoir. If `true` the full length of the string will be read, just the extra characters past the terminating character dropped. If `false` and we read the terminating character before reaching the length the remaining data wont be skipped. If `false` and we read 'till the end of length the behavoir is as normal.
         pascal : Used to read pascal strings where the first byte is the length of the following string. Can't be used with the other options.
+        missing : Default value or function to calculate default value given record context.
       }
 
 Records
