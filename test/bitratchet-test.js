@@ -103,9 +103,17 @@ test("Large numbers", function () {
 });
 
 test("Defaults", function () {
+    raises(
+        function () {
+            bitratchet.number({ length : 8 }).unparse(undefined);
+        },
+        function (err) {
+            return err === "Data missing and no missing option specified.";
+        }
+    );
     same(a_to_s(bitratchet.number({ length : 8, missing : 4 }).unparse(undefined)),
          "[0x04]");
-    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return 3; } })).unparse(undefined),
+    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return 3; } }).unparse(undefined)),
          "[0x03]");
 });
 
@@ -164,7 +172,7 @@ test("Validation", function () {
 });
 
 test("Basic", function () {
-    var string, store = {},
+    var string,
         data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
 
     // Test strings with a fixed length
@@ -175,27 +183,24 @@ test("Basic", function () {
     same(string.length, 8 * 5);
     // Test strings with terminating character and dynamic length
     string = bitratchet.string({ terminator : 0x00 });
-    same(string.parse(data, store), "abcdefghij");
-    same(store.length, 8 * "abcdefghij\u0000".length);
-    same(a_to_s(string.unparse("abcdefghij", store)), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
-    same(store.length, 8 * "abcdefghij\u0000".length);
+    same(string.parse(data), { data : "abcdefghij", length : 8 * "abcdefghij\u0000".length });
+    same(a_to_s(string.unparse("abcdefghij").data), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
+    same(string.unparse("abcdefghij").length, 8 * "abcdefghij\u0000".length);
 });
 
 test("Advanced", function () {
-    var string, store = {},
+    var string,
         data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
 
     // Test strings with terminating character and max length
     string = bitratchet.string({ terminator : 0x00, length : 8 * 3 });
-    same(string.parse(data, store), "abc");
-    same(store.length, 8 * "abc".length);
-    same(a_to_s(string.unparse("abc", store)), a_to_s([0x61, 0x62, 0x63]));
-    same(store.length, 8 * "abc".length);
+    same(string.parse(data), { data : "abc", length : 8 * "abc".length });
+    same(a_to_s(string.unparse("abc").data), a_to_s([0x61, 0x62, 0x63]));
+    same(string.unparse("abc").length, 8 * "abc".length);
     string = bitratchet.string({ terminator : 0x00, length : 8 * 20 });
-    same(string.parse(data, store), "abcdefghij");
-    same(store.length, 8 * "abcdefghij\u0000".length);
-    same(a_to_s(string.unparse("abcdefghij", store)), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
-    same(store.length, 8 * "abcdefghij\u0000".length);
+    same(string.parse(data), { data : "abcdefghij", length : 8 * "abcdefghij\u0000".length });
+    same(a_to_s(string.unparse("abcdefghij").data), a_to_s([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00]));
+    same(string.unparse("abcdefghij").length, 8 * "abcdefghij\u0000".length);
     // Test string with terminating character and min length
     string = bitratchet.string({ terminator : 0x00, length : 8 * 12, read_full_length : true });
     same(string.parse(data), "abcdefghij");
@@ -207,22 +212,29 @@ test("Advanced", function () {
 });
 
 test("Pascal", function () {
-    var string, store = {},
+    var string,
         data = init_buffer(0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x00, 0x6b, 0x6c);
 
     // Test pascal strings
     data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
     string = bitratchet.string({ pascal : true });
-    same(string.parse(data, store), "abc");
-    same(store.length, 8 * 4);
-    same(a_to_s(string.unparse("abc", store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
-    same(store.length, 8 * 4);
+    same(string.parse(data), { data : "abc", length : 8 * 4 });
+    same(a_to_s(string.unparse("abc").data), a_to_s([0x03, 0x61, 0x62, 0x63]));
+    same(string.unparse("abc").length, 8 * 4);
 });
 
 test("Defaults", function () {
-    same(a_to_s(bitratchet.number({ length : 8 * 5, missing : "abcde" }).unparse(undefined)),
+    raises(
+        function () {
+            bitratchet.string({ length : 8 }).unparse(undefined);
+        },
+        function (err) {
+            return err === "Data missing and no missing option specified.";
+        }
+    );
+    same(a_to_s(bitratchet.string({ length : 8 * 5, missing : "abcde" }).unparse(undefined)),
          "[0x61, 0x62, 0x63, 0x64, 0x65]");
-    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return "abcde"; } })).unparse(undefined),
+    same(a_to_s(bitratchet.string({ length : 8 * 5, missing : function () { return "abcde"; } }).unparse(undefined)),
          "[0x61, 0x62, 0x63, 0x64, 0x65]");
 });
 
@@ -267,25 +279,35 @@ test("Advanced", function () {
 });
 
 test("Defaults", function () {
-    same(a_to_s(bitratchet.number({ length : 4,
-                                    flags : ["red", "blue", "yellow", "green"],
-                                    values : ["off", "on"],
-                                    missing : ["off", "off", "on", "off"] }).unparse(undefined)),
+    raises(
+        function () {
+            bitratchet.flags({ length : 8, flags : [], values : [] }).unparse(undefined);
+        },
+        function (err) {
+            return err === "Data missing and no missing option specified.";
+        }
+    );
+    same(a_to_s(bitratchet.flags({ length : 4,
+                                   flags : ["red", "blue", "yellow", "green"],
+                                   values : ["off", "on"],
+                                   missing : { red : "off", blue : "off", yellow : "on", green : "off" } }).unparse(undefined)),
          "[0x02]");
-    same(a_to_s(bitratchet.number({ length : 4,
-                                    flags : ["red", "blue", "yellow", "green"],
-                                    values : ["off", "on"],
-                                    missing : function () { return ["off", "off", "on", "off"]; } }).unparse(undefined)),
+    same(a_to_s(bitratchet.flags({ length : 4,
+                                   flags : ["red", "blue", "yellow", "green"],
+                                   values : ["off", "on"],
+                                   missing : function () { return { red : "off", blue : "off",
+                                                                    yellow : "on", green : "off" }; } }).unparse(undefined)),
          "[0x02]");
-    same(a_to_s(bitratchet.number({ length : 4,
-                                    flags : ["red", "blue", "yellow", "green"],
-                                    values : [["off", "on"], ["false", "on"], ["off", "on"], ["false", "on"]],
-                                    missing : ["off", "false", "off", "true"] }).unparse(undefined)),
+    same(a_to_s(bitratchet.flags({ length : 4,
+                                   flags : ["red", "blue", "yellow", "green"],
+                                   values : [["off", "on"], ["false", "true"], ["off", "on"], ["false", "true"]],
+                                   missing : { red : "off", blue : "false", yellow : "off", green : "true" } }).unparse(undefined)),
          "[0x01]");
-    same(a_to_s(bitratchet.number({ length : 4,
-                                    flags : ["red", "blue", "yellow", "green"],
-                                    values : [["off", "on"], ["false", "on"], ["off", "on"], ["false", "on"]],
-                                    missing : function () { return ["off", "false", "off", "on"]; } }).unparse(undefined)),
+    same(a_to_s(bitratchet.flags({ length : 4,
+                                   flags : ["red", "blue", "yellow", "green"],
+                                   values : [["off", "on"], ["false", "true"], ["off", "on"], ["false", "true"]],
+                                   missing : function () { return { red : "off", blue : "false",
+                                                                    yellow : "off", green : "true" }; } }).unparse(undefined)),
          "[0x01]");
 });
 
@@ -333,7 +355,7 @@ test("Hex", function () {
 test("Defaults", function () {
     same(a_to_s(bitratchet.hex({ length : 8 * 5, missing : "0102030a0b" }).unparse(undefined)),
          "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
-    same(a_to_s(bitratchet.number({ length : 8 * 5, missing : function () { return "0102030a0b"; } })).unparse(undefined),
+    same(a_to_s(bitratchet.hex({ length : 8 * 5, missing : function () { return "0102030a0b"; } }).unparse(undefined)),
          "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
 });
 
@@ -362,9 +384,6 @@ test("Lookup", function () {
                                     table : ["off", "on"] }).unparse("on")), "[0x01]");
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
                                     table : ["off", "half", "on"] }).unparse("on")), "[0x02]");
-    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
-                                    table : ["off", "half"],
-                                    missing : "off" }).unparse("on")), "[0x00]");
     // Sometimes table might an object
     same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
                              table : { 0 : "off", 1 : "on"} }).parse(data), "on");
@@ -373,26 +392,25 @@ test("Lookup", function () {
 });
 
 test("Defaults", function () {
-    same(a_to_s(bitratchet.hex({ type : bitratchet.number({ length : 8 }),
-                                 table : ["hipity", "hop", "you don't stop", "boogy"],
-                                 missing : "boogy" }).parse(undefined)), "[0x03]");
-    same(a_to_s(bitratchet.hex({ type : bitratchet.number({ length : 8 }),
-                                 table : ["hipity", "hop", "you don't stop", "boogy"],
-                                 missing : function () { return "boogy"; } }).parse(undefined)), "[0x03]");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
+                                    table : ["hipity", "hop", "you don't stop", "boogy"],
+                                    missing : "boogy" }).unparse(undefined)), "[0x03]");
+    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
+                                    table : ["hipity", "hop", "you don't stop", "boogy"],
+                                    missing : function () { return "boogy"; } }).unparse(undefined)), "[0x03]");
 });
 
 module("Record");
 
 test("Basic", function () {
-    var data = init_buffer(0x11, 0x12, 0xFF, 0x1),
+    var result, data = init_buffer(0x11, 0x12, 0xFF, 0x1),
         record = bitratchet.record({ a : bitratchet.number({ length : 8 }),
-                                     b : bitratchet.hex({ length : 8 * 3 })}),
-        store = {};
+                                     b : bitratchet.hex({ length : 8 * 3 })});
     same(record.length, undefined);
-    same(record.parse(data, store), { a : 0x11, b : "12ff01" });
-    same(store.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x11, b : "12ff01" }, store)), a_to_s(data));
-    same(store.length, 8 * 4);
+    same(record.parse(data), { data : { a : 0x11, b : "12ff01" }, length : 8 * 4 });
+    result = record.unparse({ a : 0x11, b : "12ff01" });
+    same(a_to_s(result.data), a_to_s(data));
+    same(result.length, 8 * 4);
 });
 
 test("Dynamic lengths", function () {
@@ -400,39 +418,34 @@ test("Dynamic lengths", function () {
         record = bitratchet.record({ a : function () {
             return bitratchet.number({ length : 8 * 2 });
         },
-                                     b : bitratchet.hex({ length : 8 * 2 })}),
-        store = {};
+                                     b : bitratchet.hex({ length : 8 * 2 })});
     same(record.length, undefined);
-    same(record.parse(data, store), { a : 0x1112, b : "ff01" });
-    same(store.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x1112, b : "ff01" }, store)), a_to_s(data));
-    same(store.length, 8 * 4);
+    same(record.parse(data), { data : { a : 0x1112, b : "ff01" }, length : 8 * 4 });
+    same(a_to_s(record.unparse({ a : 0x1112, b : "ff01" }).data), a_to_s(data));
+    same(record.unparse({ a : 0x1112, b : "ff01" }).length, 8 * 4);
 });
 
 test("Nested records", function () {
     var data = init_buffer(0x11, 0x12, 0xff, 0x1),
         record = bitratchet.record({ a : bitratchet.record({ a : bitratchet.number({ length : 8 }),
                                                              b : bitratchet.number({ length : 8 }) }),
-                                     b : bitratchet.hex({ length : 8 * 2 })}),
-        store = {};
+                                     b : bitratchet.hex({ length : 8 * 2 })});
     same(record.length, undefined);
-    same(record.parse(data, store), { a : { a : 0x11, b: 0x12}, b : "ff01" });
-    same(store.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : { a : 0x11, b: 0x12}, b : "ff01" }, store)), a_to_s(data));
-    same(store.length, 8 * 4);
+    same(record.parse(data), { data : { a : { a : 0x11, b: 0x12}, b : "ff01" },
+                               length :  8 * 4 });
+    same(a_to_s(record.unparse({ a : { a : 0x11, b: 0x12}, b : "ff01" }).data), a_to_s(data));
+    same(record.unparse({ a : { a : 0x11, b: 0x12}, b : "ff01" }).length, 8 * 4);
 });
 
 test("Bit shifting", function () {
     var data = init_buffer(0x01, 0xf2, 0xff, 0x1f),
         record = bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                      b : bitratchet.hex({ length : 8 }),
-                                     c : bitratchet.number({ length : 21 })}),
-        store = {};
+                                     c : bitratchet.number({ length : 21 })});
     same(record.length, undefined);
-    same(record.parse(data, store), { a : 0x0, b : "0f", c : 0x12ff1f });
-    same(store.length, 8 * 4);
-    same(a_to_s(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f }, store)), a_to_s(data));
-    same(store.length, 8 * 4);
+    same(record.parse(data), { data : { a : 0x0, b : "0f", c : 0x12ff1f }, length : 8 * 4 });
+    same(a_to_s(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f }).data), a_to_s(data));
+    same(record.unparse({ a : 0x0, b : "0f", c : 0x12ff1f }).length, 8 * 4);
 });
 
 test("Nested records with shifting and spare bits", function () {
@@ -441,12 +454,13 @@ test("Nested records with shifting and spare bits", function () {
                                      b : bitratchet.record({ a : bitratchet.number({ length : 3 }),
                                                              b : bitratchet.number({ length : 3 }) }),
                                      c : bitratchet.hex({ length : 8 })}),
-        store = {};
+        result;
     same(record.length, undefined);
-    same(record.parse(data, store), { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
-    same(store.length, 17);
-    same(a_to_s(record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" }, store)), a_to_s([0x01, 0xe3, 0xe5]));
-    same(store.length, 17);
+    same(record.parse(data), { data : { a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" },
+                               length : 17 });
+    result = record.unparse({ a : { a : 0x7 }, b : { a : 0x4, b : 0x3 }, c : "e5" });
+    same(a_to_s(result.data), a_to_s([0x01, 0xe3, 0xe5]));
+    same(result.length, 17);
 });
 
 test("Record containing dynamic primitive that uses record context.", function () {
@@ -458,10 +472,12 @@ test("Record containing dynamic primitive that uses record context.", function (
                     return bitratchet.skip({ length : 8 * 3 });
                 }
             }});
-    same(record.parse(init_buffer(0x01, 0xab, 0xcd, 0xef)), { read_message : 1, message : "abcdef" });
-    same(record.parse(init_buffer(0x00, 0xab, 0xcd, 0xef)), { read_message : 0 });
-    same(a_to_s(record.unparse({ read_message : 1, message : "abcdef" })), a_to_s([0x01, 0xab, 0xcd, 0xef]));
-    same(a_to_s(record.unparse({ read_message : 0 })), a_to_s([0x00, 0x00, 0x00, 0x00]));
+    same(record.parse(init_buffer(0x01, 0xab, 0xcd, 0xef)), { data : { read_message : 1, message : "abcdef" },
+                                                              length : 8 * 4 });
+    same(record.parse(init_buffer(0x00, 0xab, 0xcd, 0xef)), { data : { read_message : 0 },
+                                                              length : 8 * 4 });
+    same(a_to_s(record.unparse({ read_message : 1, message : "abcdef" }).data), a_to_s([0x01, 0xab, 0xcd, 0xef]));
+    same(a_to_s(record.unparse({ read_message : 0 }).data), a_to_s([0x00, 0x00, 0x00, 0x00]));
 });
 
 test("Nested record with dynamic primitive that uses parent's context.", function () {
@@ -469,12 +485,13 @@ test("Nested record with dynamic primitive that uses parent's context.", functio
                                            payload : bitratchet.record({ data : function (record) {
             return bitratchet.string({ length : record.header.length * 8 });
         }})}),
-        store = { };
+        result;
     data = init_buffer(0x03, 0x61, 0x62, 0x63, 0x64);
-    same(record.parse(data, store), { header : { length : 3 }, payload : { data : "abc" } });
-    same(store.length, 8 * 4);
-    same(a_to_s(record.unparse({ header : { length : 3 }, payload : { data : "abc" } }, store)), a_to_s([0x03, 0x61, 0x62, 0x63]));
-    same(store.length, 8 * 4);
+    same(record.parse(data), { data : { header : { length : 3 }, payload : { data : "abc" } },
+                               length : 8 * 4 });
+    result = record.unparse({ header : { length : 3 }, payload : { data : "abc" } });
+    same(a_to_s(result.data), a_to_s([0x03, 0x61, 0x62, 0x63]));
+    same(result.length, 8 * 4);
 });
 
 test("Record that skips some data.", function () {
@@ -482,20 +499,20 @@ test("Record that skips some data.", function () {
     // Test skip primitive works properly
     record = bitratchet.record({ skipped : bitratchet.skip({ length : 8 }),
                                  data : bitratchet.hex({ length : 8 * 2 }) });
-    same(record.parse(data), { data : "1234" });
-    same(a_to_s(record.unparse({ data : "1234" })), a_to_s([0x00, 0x12, 0x34]));
+    same(record.parse(data), { data : { data : "1234" }, length : 8 * 3 });
+    same(a_to_s(record.unparse({ data : "1234" }).data), a_to_s([0x00, 0x12, 0x34]));
     // Test dynamic skip doesn't move position on
     record = bitratchet.record({ skipped : function () { },
                                  data : bitratchet.hex({ length : 8 * 2 }) });
-    same(record.parse(data), { data : "ff12" });
-    same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
-    same(a_to_s(record.unparse({ data : "FF12", skipped : "test" })), a_to_s([0xff, 0x12]));
+    same(record.parse(data), { data : { data : "ff12" }, length : 8 * 2 });
+    same(a_to_s(record.unparse({ data : "FF12" }).data), a_to_s([0xff, 0x12]));
+    same(a_to_s(record.unparse({ data : "FF12", skipped : "test" }).data), a_to_s([0xff, 0x12]));
     // Test dynamic skip with value doesn't move position on
     record = bitratchet.record({ skipped :  function () { return "WAT"; },
                                  data : bitratchet.hex({ length : 8 * 2 }) });
-    same(record.parse(data), { skipped : "WAT", data : "ff12" });
-    same(a_to_s(record.unparse({ data : "FF12" })), a_to_s([0xff, 0x12]));
-    same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" })), a_to_s([0xff, 0x12]));
+    same(record.parse(data), { data : { skipped : "WAT", data : "ff12" }, length : 8 * 2 });
+    same(a_to_s(record.unparse({ data : "FF12" }).data), a_to_s([0xff, 0x12]));
+    same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" }).data), a_to_s([0xff, 0x12]));
 });
 
 test("Nested record with defaults", function () {
@@ -515,10 +532,10 @@ test("Nested record with defaults", function () {
         })
     });
     // Test defaults work properly
-    same(a_to_s(record.unparse(data)), "[0x01, 0x00]");
+    same(a_to_s(record.unparse(data).data), "[0x01, 0x00]");
     data.a = 2;
-    same(a_to_s(record.unparse(data)), "[0x02, 0x01]");
+    same(a_to_s(record.unparse(data).data), "[0x02, 0x01]");
     // Test defaults aren't used it we have data
     data.b.c = "false";
-    same(a_to_s(record.unparse(data)), "[0x02, 0x00]");
+    same(a_to_s(record.unparse(data).data), "[0x02, 0x00]");
 });

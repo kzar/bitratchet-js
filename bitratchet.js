@@ -9,8 +9,23 @@ if (!bitratchet) {
 (function () {
     "use strict";
 
+    if (typeof bitratchet.handle_missing !== 'function') {
+        bitratchet.handle_missing = function handle_missing(data, missing, context) {
+            if (data === undefined) {
+                if (missing === undefined) {
+                    throw ("Data missing and no missing option specified.");
+                } else {
+                    return typeof (missing) === 'function' ? missing(context) : missing;
+                }
+            } else {
+                return data;
+            }
+        };
+    }
+
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
+            // Helper functions
             function map_fields(f) {
                 var field;
                 for (field in structure) {
@@ -102,36 +117,38 @@ if (!bitratchet) {
             }
 
             return {
-                parse : function (data, store) {
-                    var result = {}, position = 0;
+                parse : function (data, parent_context, parent_field_name) {
+                    var context, result = {}, position = 0;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
                         data = bitratchet.hex({ length : 4 * data.length }).unparse(data);
                     }
+                    // Figure out context
+                    if (parent_field_name && parent_context) {
+                        parent_context[parent_field_name] = result;
+                        context = parent_context;
+                    } else {
+                        context = result;
+                    }
                     // Convert ArrayBuffer to int array for processing and begin
                     map_fields(function (k, v) {
-                        var field, field_store;
+                        var field, container;
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
-                            if (store && store.parent && store.parent_field_name) {
-                                store.parent[store.parent_field_name] = result;
-                                v = v(store.parent);
-                            } else {
-                                v = v(result);
-                            }
+                            v = v(context);
                         }
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
                                 // It's a primitive so parse the data
                                 if (v.length) {
                                     // Static field, parse normally
-                                    field = v.parse(shift_bytes(data, position, v.length));
+                                    field = v.parse(shift_bytes(data, position, v.length), context, k);
                                     position += v.length;
                                 } else {
                                     // Dynamic field, parse and take note of length
-                                    field_store = { parent : result, parent_field_name : k};
-                                    field = v.parse(shift_bytes(data, position, 0), field_store);
-                                    position += field_store.length;
+                                    container = v.parse(shift_bytes(data, position, 0), context, k);
+                                    field = container.data;
+                                    position += container.length;
                                 }
                             } else {
                                 // Result was given instead of primitive, just use that
@@ -143,33 +160,32 @@ if (!bitratchet) {
                             }
                         }
                     });
-                    if (store) {
-                        store.length = position;
-                    }
-                    return result;
+                    return { data : result, length : position };
                 },
-                unparse : function (data, store) {
-                    var fields = [], field, field_store, field_length, record_length = 0;
-                    // First parse each part collecting the result and it's length
+                unparse : function (data, parent_context, parent_field_name) {
+                    var context, fields = [], field, container, field_length, record_length = 0;
+                    // Figure out context
+                    if (parent_field_name && parent_context) {
+                        parent_context[parent_field_name] = data;
+                        context = parent_context;
+                    } else {
+                        context = data;
+                    }
+                    // Parse each part collecting the result and it's length
                     map_fields(function (k, v) {
                         if (typeof v === 'function') {
-                            if (store && store.parent && store.parent_field_name) {
-                                store.parent[store.parent_field_name] = data;
-                                v = v(store.parent);
-                            } else {
-                                v = v(data);
-                            }
+                            v = v(context);
                         }
                         if (v && v.hasOwnProperty('unparse')) {
                             if (v.length) {
                                 // Static field
-                                field = v.unparse(data[k]);
+                                field = v.unparse(data[k], context, k);
                                 field_length = v.length;
                             } else {
                                 // Dynamic field
-                                field_store = { parent : data, parent_field_name : k };
-                                field = v.unparse(data[k], field_store);
-                                field_length = field_store.length;
+                                container = v.unparse(data[k], context, k);
+                                field = container.data;
+                                field_length = container.length;
                             }
                             if (field === undefined) {
                                 // We're skipping data as we have a length but no value - zero it
@@ -183,11 +199,7 @@ if (!bitratchet) {
                             record_length += field_length;
                         }
                     });
-                    // Now put all those fields into an ArrayBuffer and return
-                    if (store) {
-                        store.length = record_length;
-                    }
-                    return assemble_data(fields, record_length);
+                    return { data : assemble_data(fields, record_length), length : record_length };
                 }
             };
         };
@@ -280,7 +292,8 @@ if (!bitratchet) {
                         // And parse
                         return round_number(binary_to_number(copy, options.length, options.signed) * scale(options), options.precision);
                     },
-                    unparse : function (data) {
+                    unparse : function (data, context) {
+                        data = bitratchet.handle_missing(data, options.missing, context);
                         return number_to_binary(Math.round(data / scale(options)), options.length);
                     },
                     length: options.length
@@ -326,16 +339,14 @@ if (!bitratchet) {
                 }
                 // Return the string primitive
                 return {
-                    parse : function (data, store) {
+                    parse : function (data) {
                         var end, result, length_hit = false;
                         // Convert buffer to string
                         result = buffer_to_string(data);
                         // Firstly deal with pascal strings
                         if (options.pascal) {
-                            if (store) {
-                                store.length = (result.charCodeAt(0) + 1) * 8;
-                            }
-                            return result.substr(1, result.charCodeAt(0));
+                            return { data : result.substr(1, result.charCodeAt(0)),
+                                     length : (result.charCodeAt(0) + 1) * 8 };
                         }
                         // If string is of static length we can return
                         if (this.length) {
@@ -360,21 +371,17 @@ if (!bitratchet) {
                             end = options.length / 8;
                             length_hit = true;
                         }
-                        if (store) {
-                            store.length = (options.read_full_length || length_hit) ? options.length : (end + 1) * 8;
-                        }
                         // Then read it as normal
-                        return result.substr(0, end);
+                        return { data : result.substr(0, end),
+                                 length : (options.read_full_length || length_hit) ? options.length : (end + 1) * 8 };
                     },
-                    unparse : function (data, store) {
+                    unparse : function (data, context) {
                         var buffer;
+                        data = bitratchet.handle_missing(data, options.missing, context);
                         // First handle pascal strings
                         if (options.pascal) {
                             data = String.fromCharCode(data.length) + data;
-                            if (store) {
-                                store.length = data.length * 8;
-                            }
-                            return string_to_buffer(data, data.length);
+                            return { data : string_to_buffer(data, data.length), length : data.length * 8 };
                         }
 
                         // Next make sure string is terminated if it should be
@@ -387,12 +394,12 @@ if (!bitratchet) {
                         buffer = string_to_buffer(data, this.length / 8 ||
                                                   data.search(String.fromCharCode(options.terminator)) + 1 ||
                                                   options.length / 8);
-                        // Take note of length
-                        if (!this.length && store) {
-                            store.length = buffer.byteLength * 8;
+                        // Return
+                        if (!this.length) {
+                            return { data : buffer, length : buffer.byteLength * 8 };
+                        } else {
+                            return buffer;
                         }
-                        // and return
-                        return buffer;
                     },
                     length : (function () {
                         if (options.length && (options.terminator === undefined || options.read_full_length)) {
@@ -406,41 +413,30 @@ if (!bitratchet) {
 
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
-            function value_index(o, value, missing_value) {
-                var key, missing_key, found;
-                for (key in o) {
-                    if (o.hasOwnProperty(key)) {
-                        if (o[key] === value) {
-                            return { index : key, found : true};
-                        }
-                        if (o[key] === missing_value) {
-                            missing_key = key;
-                            found = true;
-                        }
-                    }
-                }
-                return { index : missing_key, found : found};
-            }
             return {
-                parse : function (data) {
+                parse : function (data, context) {
                     var index = options.type.parse(data);
                     if (options.table.hasOwnProperty(index)) {
                         return options.table[index];
                     } else {
-                        return options.missing;
+                        if (typeof (options.missing) === 'function') {
+                            return options.missing(context);
+                        } else {
+                            return options.missing;
+                        }
                     }
                 },
-                unparse : function (data) {
-                    var result, find_result;
-                    find_result = value_index(options.table, data, options.missing);
-                    if (find_result.found) {
-                        result = options.type.unparse(find_result.index);
-                        this.length = options.type.length;
-                        return result;
-                    } else {
-                        // We couldn't find value given in lookup table
-                        throw "Value given not in lookup-table.";
+                unparse : function (data, context) {
+                    var key, result;
+                    data = bitratchet.handle_missing(data, options.missing, context);
+                    for (key in options.table) {
+                        if (options.table.hasOwnProperty(key) && options.table[key] === data) {
+                            result = options.type.unparse(key);
+                            this.length = options.type.length;
+                            return result;
+                        }
                     }
+                    throw "Value given not in lookup-table.";
                 },
                 length : options.type.length
             };
@@ -486,9 +482,10 @@ if (!bitratchet) {
                     }
                     return results;
                 },
-                unparse : function (data) {
+                unparse : function (data, context) {
                     var i, flag, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
                         bytes = new Uint8Array(buffer);
+                    data = bitratchet.handle_missing(data, options.missing, context);
                     // Work through flags ORing their values onto relevant byte
                     for (i = 0; i < options.flags.length; i += 1) {
                         if (options.flags[i]) {
@@ -539,7 +536,8 @@ if (!bitratchet) {
                     // Return right amount of the hex
                     return hex.substr(hex.length - options.length / 4);
                 },
-                unparse : function (data) {
+                unparse : function (data, context) {
+                    data = bitratchet.handle_missing(data, options.missing, context);
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
                         throw "Invalid hex, can't unparse.";
                     }
