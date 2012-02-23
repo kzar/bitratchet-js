@@ -108,7 +108,7 @@ test("Defaults", function () {
             bitratchet.number({ length : 8 }).unparse(undefined);
         },
         function (err) {
-            return err === "Data missing and no missing option specified.";
+            return err === "Data missing and no default value given.";
         }
     );
     same(a_to_s(bitratchet.number({ length : 8, missing : 4 }).unparse(undefined)),
@@ -229,7 +229,7 @@ test("Defaults", function () {
             bitratchet.string({ length : 8 }).unparse(undefined);
         },
         function (err) {
-            return err === "Data missing and no missing option specified.";
+            return err === "Data missing and no default value given.";
         }
     );
     same(a_to_s(bitratchet.string({ length : 8 * 5, missing : "abcde" }).unparse(undefined)),
@@ -284,7 +284,7 @@ test("Defaults", function () {
             bitratchet.flags({ length : 8, flags : [], values : [] }).unparse(undefined);
         },
         function (err) {
-            return err === "Data missing and no missing option specified.";
+            return err === "Data missing and no default value given.";
         }
     );
     same(a_to_s(bitratchet.flags({ length : 4,
@@ -531,6 +531,19 @@ test("Nested record with defaults", function () {
                 } })
         })
     });
+
+
+    // Test we notice if no value or default is given
+    raises(
+        function () {
+            bitratchet.record({
+                a : bitratchet.number({ length : 8 })
+            }).unparse({});
+        },
+        function (err) {
+            return err === "Data missing for field \"a\" and no default value given.";
+        }
+    );
     // Test defaults work properly
     same(a_to_s(record.unparse(data).data), "[0x01, 0x00]");
     data.a = 2;
