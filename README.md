@@ -33,13 +33,12 @@ The primitive object must follow these rules:
 
  - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
- - Parse and unparse functions must accept an optional second `context` parameter used for passing in the record's context.
+ - Parse and unparse functions are passed two extra parameters, `context` and `parent_field_name`. They can be safely ignored and probably will only be of use to the record primitive.
+ - It should contain a missing field - usually set by the missing option - that contains the default value to use. If the missing field contains a function it will be called with the record context to determine the default value.
  - It should contain a length field containing a number specifying - in bits - how large the primitive is. If the length field is omitted the primitive is considered of dynmaic length.
  - Dynamic length primitives are only necessary when the primitive's length varies depending on _its own value_. They are only necessary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must return an object containing the data and bit length like so: `{ data : ..., length ... }` instead of just the data. Dynamic length fields also have to deal with extra data and don't get as much help with putting their data into the right position.
- - Primtives `parse` and `unparse` functions are also passed an optional third parameter containg the parent record's field name for the primitive. (Probably is only useful to the record primitive, it's used to facilitate nested records.)
  - If the primitive's length is not divisible by 8 the parse function should ignore any extra bits (left at the MSB end of the first and MSB byte) and the unparse function should take care to zero them.
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown.
- - By convention primtives should accept a `missing` option when it's possible the primitive's value will be omitted, the option could contain a value or a function to be called. The missing option is then used by the unparse function when the value is undefined. (The provided `bitratchet.handle_missing` function can be called at the start of unparse like so `data = bitratchet.handle_missing(data, options.missing, context);`.)
 
 Included primitives:
 
@@ -133,7 +132,8 @@ For example here's a timestamp primtive that makes use of the number primitive t
               unparse : function (data) {
                   return bitratchet.number(options).unparse(typeof data === 'string' ? Date.parse(data) : data.getTime() / 1000);
               },
-              length : options.length
+              length : options.length,
+              missing : Date.now()
           };
       }
 
@@ -151,7 +151,7 @@ Here's another example, this time for parsing IP address':
               unparse : function (data) {
                   return bitratchet.hex({ length : 8 * 4 }).unparse(data.replace(/\./g, ""));
               },
-              length : 8 * 4
+              length : 8 * 4,
           };
       }
 

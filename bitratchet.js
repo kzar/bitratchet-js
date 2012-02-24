@@ -9,24 +9,6 @@ if (!bitratchet) {
 (function () {
     "use strict";
 
-    if (typeof bitratchet.handle_missing !== 'function') {
-        bitratchet.handle_missing = function handle_missing(data, missing, context, field_name) {
-            if (data === undefined) {
-                if (missing === undefined) {
-                    if (field_name) {
-                        throw("Data missing for field \"" + field_name + "\" and no default value given.");
-                    } else {
-                        throw ("Data missing and no default value given.");
-                    }
-                } else {
-                    return typeof (missing) === 'function' ? missing(context) : missing;
-                }
-            } else {
-                return data;
-            }
-        };
-    }
-
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
             // Helper functions
@@ -166,8 +148,16 @@ if (!bitratchet) {
                     });
                     return { data : result, length : position };
                 },
-                unparse : function (data, parent_context, parent_field_name) {
-                    var context, fields = [], field, container, field_length, record_length = 0;
+                unparse : function (original_data, parent_context, parent_field_name) {
+                    var context, fields = [], key, field, container, field_length, record_length = 0,
+                        data = {};
+                    // Copy data into new object to avoid corrupting with missing fields
+                    // FIXME, maybe some way to avoid doing this?
+                    for (key in original_data) {
+                        if (original_data.hasOwnProperty(key)) {
+                            data[key] = original_data[key];
+                        }
+                    }
                     // Figure out context
                     if (parent_field_name && parent_context) {
                         parent_context[parent_field_name] = data;
@@ -177,10 +167,24 @@ if (!bitratchet) {
                     }
                     // Parse each part collecting the result and it's length
                     map_fields(function (k, v) {
+                        // Resolve primitive to use
                         if (typeof v === 'function') {
                             v = v(context);
                         }
+                        // Unparse the data
                         if (v && v.hasOwnProperty('unparse')) {
+                            // Handle default values
+                            if (!(data.hasOwnProperty(k))) {
+                                if (v.missing !== undefined) {
+                                    if (typeof (v.missing) === 'function') {
+                                        data[k] = v.missing(context);
+                                    } else {
+                                        data[k] = v.missing;
+                                    }
+                                } else {
+                                    throw ("Data missing for field \"" + k + "\" and no default value given.");
+                                }
+                            }
                             if (v.length) {
                                 // Static field
                                 field = v.unparse(data[k], context, k);
@@ -296,11 +300,11 @@ if (!bitratchet) {
                         // And parse
                         return round_number(binary_to_number(copy, options.length, options.signed) * scale(options), options.precision);
                     },
-                    unparse : function (data, context, field_name) {
-                        data = bitratchet.handle_missing(data, options.missing, context, field_name);
+                    unparse : function (data) {
                         return number_to_binary(Math.round(data / scale(options)), options.length);
                     },
-                    length: options.length
+                    length : options.length,
+                    missing : options.missing
                 };
             };
         }());
@@ -379,9 +383,8 @@ if (!bitratchet) {
                         return { data : result.substr(0, end),
                                  length : (options.read_full_length || length_hit) ? options.length : (end + 1) * 8 };
                     },
-                    unparse : function (data, context, field_name) {
+                    unparse : function (data) {
                         var buffer;
-                        data = bitratchet.handle_missing(data, options.missing, context, field_name);
                         // First handle pascal strings
                         if (options.pascal) {
                             data = String.fromCharCode(data.length) + data;
@@ -409,7 +412,8 @@ if (!bitratchet) {
                         if (options.length && (options.terminator === undefined || options.read_full_length)) {
                             return options.length;
                         }
-                    }())
+                    }()),
+                    missing : options.missing
                 };
             };
         }());
@@ -430,9 +434,8 @@ if (!bitratchet) {
                         }
                     }
                 },
-                unparse : function (data, context, field_name) {
+                unparse : function (data) {
                     var key, result;
-                    data = bitratchet.handle_missing(data, options.missing, context, field_name);
                     for (key in options.table) {
                         if (options.table.hasOwnProperty(key) && options.table[key] === data) {
                             result = options.type.unparse(key);
@@ -442,7 +445,8 @@ if (!bitratchet) {
                     }
                     throw "Value given not in lookup-table.";
                 },
-                length : options.type.length
+                length : options.type.length,
+                missing : options.missing
             };
         };
     }
@@ -486,10 +490,9 @@ if (!bitratchet) {
                     }
                     return results;
                 },
-                unparse : function (data, context, field_name) {
+                unparse : function (data) {
                     var i, flag, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
                         bytes = new Uint8Array(buffer);
-                    data = bitratchet.handle_missing(data, options.missing, context, field_name);
                     // Work through flags ORing their values onto relevant byte
                     for (i = 0; i < options.flags.length; i += 1) {
                         if (options.flags[i]) {
@@ -499,7 +502,8 @@ if (!bitratchet) {
                     }
                     return buffer;
                 },
-                length : options.length
+                length : options.length,
+                missing : options.missing
             };
         };
     }
@@ -509,7 +513,8 @@ if (!bitratchet) {
             return {
                 parse : function () { },
                 unparse : function () { },
-                length : options.length
+                length : options.length,
+                missing : function () { }
             };
         };
     }
@@ -540,8 +545,7 @@ if (!bitratchet) {
                     // Return right amount of the hex
                     return hex.substr(hex.length - options.length / 4);
                 },
-                unparse : function (data, context, field_name) {
-                    data = bitratchet.handle_missing(data, options.missing, context, field_name);
+                unparse : function (data) {
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
                         throw "Invalid hex, can't unparse.";
                     }
@@ -563,7 +567,8 @@ if (!bitratchet) {
                     // Return
                     return buffer;
                 },
-                length : options.length
+                length : options.length,
+                missing : options.missing
             };
         };
     }

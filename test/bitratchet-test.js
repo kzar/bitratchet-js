@@ -102,21 +102,6 @@ test("Large numbers", function () {
     same(a_to_s(bitratchet.number({ length : 8 * 6, signed : true }).unparse(-1)), a_to_s(data));
 });
 
-test("Defaults", function () {
-    raises(
-        function () {
-            bitratchet.number({ length : 8 }).unparse(undefined);
-        },
-        function (err) {
-            return err === "Data missing and no default value given.";
-        }
-    );
-    same(a_to_s(bitratchet.number({ length : 8, missing : 4 }).unparse(undefined)),
-         "[0x04]");
-    same(a_to_s(bitratchet.number({ length : 8, missing : function () { return 3; } }).unparse(undefined)),
-         "[0x03]");
-});
-
 module("String");
 
 test("Validation", function () {
@@ -223,21 +208,6 @@ test("Pascal", function () {
     same(string.unparse("abc").length, 8 * 4);
 });
 
-test("Defaults", function () {
-    raises(
-        function () {
-            bitratchet.string({ length : 8 }).unparse(undefined);
-        },
-        function (err) {
-            return err === "Data missing and no default value given.";
-        }
-    );
-    same(a_to_s(bitratchet.string({ length : 8 * 5, missing : "abcde" }).unparse(undefined)),
-         "[0x61, 0x62, 0x63, 0x64, 0x65]");
-    same(a_to_s(bitratchet.string({ length : 8 * 5, missing : function () { return "abcde"; } }).unparse(undefined)),
-         "[0x61, 0x62, 0x63, 0x64, 0x65]");
-});
-
 module("Flags");
 
 test("Simple", function () {
@@ -276,39 +246,6 @@ test("Advanced", function () {
                                            ["false", "true"], ["no", "yes"]] });
     same(colours.parse(init_buffer(0x04)), { blue : "low", yellow : "on", green : "false", red : "no" });
     same(a_to_s(colours.unparse({ blue : "low", yellow : "on", green : "false", red : "no" })), a_to_s([0x04]));
-});
-
-test("Defaults", function () {
-    raises(
-        function () {
-            bitratchet.flags({ length : 8, flags : [], values : [] }).unparse(undefined);
-        },
-        function (err) {
-            return err === "Data missing and no default value given.";
-        }
-    );
-    same(a_to_s(bitratchet.flags({ length : 4,
-                                   flags : ["red", "blue", "yellow", "green"],
-                                   values : ["off", "on"],
-                                   missing : { red : "off", blue : "off", yellow : "on", green : "off" } }).unparse(undefined)),
-         "[0x02]");
-    same(a_to_s(bitratchet.flags({ length : 4,
-                                   flags : ["red", "blue", "yellow", "green"],
-                                   values : ["off", "on"],
-                                   missing : function () { return { red : "off", blue : "off",
-                                                                    yellow : "on", green : "off" }; } }).unparse(undefined)),
-         "[0x02]");
-    same(a_to_s(bitratchet.flags({ length : 4,
-                                   flags : ["red", "blue", "yellow", "green"],
-                                   values : [["off", "on"], ["false", "true"], ["off", "on"], ["false", "true"]],
-                                   missing : { red : "off", blue : "false", yellow : "off", green : "true" } }).unparse(undefined)),
-         "[0x01]");
-    same(a_to_s(bitratchet.flags({ length : 4,
-                                   flags : ["red", "blue", "yellow", "green"],
-                                   values : [["off", "on"], ["false", "true"], ["off", "on"], ["false", "true"]],
-                                   missing : function () { return { red : "off", blue : "false",
-                                                                    yellow : "off", green : "true" }; } }).unparse(undefined)),
-         "[0x01]");
 });
 
 module("Hex");
@@ -352,13 +289,6 @@ test("Hex", function () {
     same(a_to_s(bitratchet.hex({ length : 4 }).unparse("f")), a_to_s([0xf]));
 });
 
-test("Defaults", function () {
-    same(a_to_s(bitratchet.hex({ length : 8 * 5, missing : "0102030a0b" }).unparse(undefined)),
-         "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
-    same(a_to_s(bitratchet.hex({ length : 8 * 5, missing : function () { return "0102030a0b"; } }).unparse(undefined)),
-         "[0x01, 0x02, 0x03, 0x0a, 0x0b]");
-});
-
 module("Lookup");
 
 test("Lookup", function () {
@@ -389,15 +319,6 @@ test("Lookup", function () {
                              table : { 0 : "off", 1 : "on"} }).parse(data), "on");
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
                                     table : { 0 : "off", 1 : "on"} }).unparse("on")), "[0x01]");
-});
-
-test("Defaults", function () {
-    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
-                                    table : ["hipity", "hop", "you don't stop", "boogy"],
-                                    missing : "boogy" }).unparse(undefined)), "[0x03]");
-    same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
-                                    table : ["hipity", "hop", "you don't stop", "boogy"],
-                                    missing : function () { return "boogy"; } }).unparse(undefined)), "[0x03]");
 });
 
 module("Record");
@@ -531,8 +452,6 @@ test("Nested record with defaults", function () {
                 } })
         })
     });
-
-
     // Test we notice if no value or default is given
     raises(
         function () {
@@ -548,7 +467,7 @@ test("Nested record with defaults", function () {
     same(a_to_s(record.unparse(data).data), "[0x01, 0x00]");
     data.a = 2;
     same(a_to_s(record.unparse(data).data), "[0x02, 0x01]");
-    // Test defaults aren't used it we have data
+    // Test defaults aren't used if we have data
     data.b.c = "false";
     same(a_to_s(record.unparse(data).data), "[0x02, 0x00]");
 });
