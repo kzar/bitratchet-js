@@ -30,6 +30,13 @@ function init_buffer() {
     return buffer;
 }
 
+module("Misc");
+
+test("Version", function () {
+    ok(bitratchet.version);
+    same(bitratchet.version.toString(), bitratchet.version.major + "." + bitratchet.version.minor + "." + bitratchet.version.patch);
+});
+
 module("Number");
 
 test("Unsigned", function () {

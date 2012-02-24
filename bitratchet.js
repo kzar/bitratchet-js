@@ -9,6 +9,17 @@ if (!bitratchet) {
 (function () {
     "use strict";
 
+    if (typeof bitratchet.version !== 'object') {
+        bitratchet.version = {
+            major : 1,
+            patch : 0,
+            minor : 0,
+            toString : function () {
+                return this.major + "." + this.minor + "." + this.patch;
+            }
+        };
+    }
+
     if (typeof bitratchet.record !== 'function') {
         bitratchet.record = function record(structure) {
             // Helper functions
