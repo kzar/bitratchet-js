@@ -114,12 +114,15 @@ if (!bitratchet) {
             }
 
             return {
-                parse : function (data, parent_context, parent_field_name) {
+                parse : function (data, external_state, parent_context, parent_field_name) {
                     var context, result = {}, position = 0;
                     // For convenience allow hex strings too
                     if (typeof data === 'string') {
                         data = bitratchet.hex({ length : 4 * data.length }).unparse(data);
                     }
+                    // Also for convenience make state and context default to { }
+                    external_state = external_state || { };
+                    parent_context = parent_context || { };
                     // Figure out context
                     if (parent_field_name && parent_context) {
                         parent_context[parent_field_name] = result;
@@ -132,18 +135,18 @@ if (!bitratchet) {
                         var field, container;
                         if (typeof v === 'function') {
                             // For dynamic fields first figure out what our primitive is
-                            v = v(context);
+                            v = v(external_state, context);
                         }
                         if (v) {
                             if (v.hasOwnProperty('parse')) {
                                 // It's a primitive so parse the data
                                 if (v.length) {
                                     // Static field, parse normally
-                                    field = v.parse(shift_bytes(data, position, v.length), context, k);
+                                    field = v.parse(shift_bytes(data, position, v.length), external_state, context, k);
                                     position += v.length;
                                 } else {
                                     // Dynamic field, parse and take note of length
-                                    container = v.parse(shift_bytes(data, position, 0), context, k);
+                                    container = v.parse(shift_bytes(data, position, 0), external_state, context, k);
                                     field = container.data;
                                     position += container.length;
                                 }
@@ -159,9 +162,12 @@ if (!bitratchet) {
                     });
                     return { data : result, length : position };
                 },
-                unparse : function (original_data, parent_context, parent_field_name) {
+                unparse : function (original_data, external_state, parent_context, parent_field_name) {
                     var context, fields = [], key, field, container, field_length, record_length = 0,
                         data = {};
+                    // For convenience make state and context default to { }
+                    external_state = external_state || { };
+                    parent_context = parent_context || { };
                     // Copy data into new object to avoid corrupting with missing fields
                     // FIXME, maybe some way to avoid doing this?
                     for (key in original_data) {
@@ -180,7 +186,7 @@ if (!bitratchet) {
                     map_fields(function (k, v) {
                         // Resolve primitive to use
                         if (typeof v === 'function') {
-                            v = v(context);
+                            v = v(external_state, context);
                         }
                         // Unparse the data
                         if (v && v.hasOwnProperty('unparse')) {
@@ -188,7 +194,7 @@ if (!bitratchet) {
                             if (!(data.hasOwnProperty(k))) {
                                 if (v.missing !== undefined) {
                                     if (typeof (v.missing) === 'function') {
-                                        data[k] = v.missing(context);
+                                        data[k] = v.missing(external_state, context);
                                     } else {
                                         data[k] = v.missing;
                                     }
@@ -198,11 +204,11 @@ if (!bitratchet) {
                             }
                             if (v.length) {
                                 // Static field
-                                field = v.unparse(data[k], context, k);
+                                field = v.unparse(data[k], external_state, context, k);
                                 field_length = v.length;
                             } else {
                                 // Dynamic field
-                                container = v.unparse(data[k], context, k);
+                                container = v.unparse(data[k], external_state, context, k);
                                 field = container.data;
                                 field_length = container.length;
                             }
@@ -288,9 +294,8 @@ if (!bitratchet) {
             function round_number(number, precision) {
                 if (precision === undefined) {
                     return number;
-                } else {
-                    return Math.round(number * Math.pow(10, precision)) / Math.pow(10, precision);
                 }
+                return Math.round(number * Math.pow(10, precision)) / Math.pow(10, precision);
             }
             function scale(options) {
                 return (options.custom_scale ||
@@ -374,9 +379,8 @@ if (!bitratchet) {
                             }
                             if (options.terminator !== undefined && end > -1) {
                                 return result.substr(0, end);
-                            } else {
-                                return result.substr(0, options.length / 8);
                             }
+                            return result.substr(0, options.length / 8);
                         }
                         // Otherwise we need to figure out its length
                         end = result.search(String.fromCharCode(options.terminator));
@@ -415,9 +419,8 @@ if (!bitratchet) {
                         // Return
                         if (!this.length) {
                             return { data : buffer, length : buffer.byteLength * 8 };
-                        } else {
-                            return buffer;
                         }
+                        return buffer;
                     },
                     length : (function () {
                         if (options.length && (options.terminator === undefined || options.read_full_length)) {
@@ -435,15 +438,15 @@ if (!bitratchet) {
             return {
                 parse : function (data, context) {
                     var index = options.type.parse(data);
+                    // We have the value
                     if (options.table.hasOwnProperty(index)) {
                         return options.table[index];
-                    } else {
-                        if (typeof (options.missing) === 'function') {
-                            return options.missing(context);
-                        } else {
-                            return options.missing;
-                        }
                     }
+                    // Not sure, check if we've been given a default
+                    if (typeof (options.missing) === 'function') {
+                        return options.missing(context);
+                    }
+                    return options.missing;
                 },
                 unparse : function (data) {
                     var key, result;

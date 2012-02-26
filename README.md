@@ -8,7 +8,7 @@ Features include:
 
  - Avoid duplicate code, you only have to specify records once as with [BinData](http://bindata.rubyforge.org/). (Normally you end up writing double the code when you need to generate messages as well as read them.)
  - Deal transparently with bit (as opposed to byte) based fields, shifting is completely taken care of - as with the [PHP BitRatchet library](https://github.com/kzar/bit-ratchet).
- - Handle dynamic fields that can vary in length and structure based on any context of the data already parsed. (Fields can even vary in length based on their own value but shifting is no longer handled automatically in that one, extreme situation.)
+ - Handle dynamic fields that can vary in length and structure based on any context of the data already parsed and external state.
  - Build your own flexible primitives that can extend the library to your problem domain. They can fully leverage the provided primitives.
 
 Developed to help implement a commercial telematics messaging protocol in Javascript.
@@ -38,8 +38,8 @@ Primitive objects must follow these rules:
 
  - It must contain a `parse` field containing a function that expects data in a ArrayBuffer and returns the parsed information.
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
- - Parse and unparse functions are passed two extra parameters, `context` and `parent_field_name`. They can be safely ignored and probably will only be of use to the record primitive.
- - It should contain a `missing` field - usually just set to `options.missing` - that contains the default value to use. If the `missing` field contains a function it will be called with the record context to determine the default value. If the `missing` field isn't present and a value isn't given an exception will be thrown.
+ - Parse and unparse functions are passed three extra parameters, `external_state`, `record_context` and `parent_field_name`. `external_state` is an object containing any external state needed to parse / unparse the data, `record_context` is an object containing the parsed / unparsed data so far. `parent_field_name` is used by the record primitive to assemble the `record_context` on the fly and can be safely ignored.
+ - It should contain a `missing` field - usually just set to `options.missing` - that contains the default value to use. If the `missing` field contains a function it will be called with the `external_state` and `record_context` to determine the default value. If the `missing` field isn't present and a value isn't given an exception will be thrown.
  - It should contain a length field containing a number specifying - in bits - how large the primitive is. If the length field is omitted the primitive is considered of dynmaic length.
  - Dynamic length primitives are only necessary when the primitive's length varies depending on _its own value_. They are only necessary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must return an object containing the data and bit length like so: `{ data : ..., length : ... }` instead of just the data. Dynamic length fields also have to deal with shifting extra data manually.
  - If the primitive's length is not divisible by 8 the parse function should ignore any extra bits (which will be positioned at the MSB end of the first and MSB byte).
@@ -58,7 +58,7 @@ Included primitives:
         precision : Decimal place precision to round to. (Default is no rounding.)
         scale_range : If the number is scaled to a range provide the range. (The same as providing a custom_scale of Math.pow(2, options.length) / options.scale_range)
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
-        missing : Default value or function to calculate default value given record context.
+        missing : Default value or function to calculate default value given context.
       }
 
  - `record` a really important primitive used to group primitives, detailed in it's own section below.
@@ -71,7 +71,7 @@ Included primitives:
         length : Length in bits of raw data.
         flags : Array of flags, falsey to skip / ignore, e.g. ["blue", 0, "red", "yellow"], should be of same length as length option above.
         values : Array of values, for example ["false", "true"] or ["off", "on"]. (Can also be a two-dimensional array if each field needs a different value, e.g. [["false", "true"], ["off", "on"]].)
-        missing : Default value or function to calculate default value given record context.
+        missing : Default value or function to calculate default value given context.
       }
 
  - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundaries however.)
@@ -81,7 +81,7 @@ Included primitives:
       Expected options:
       {
         length : Length of hex to read in bits, must be divisible by 4.
-        missing : Default value or function to calculate default value given record context.
+        missing : Default value or function to calculate default value given context.
       }
 
  - `lookup` - a simple primitive you can use to parse "lookup table" entries, it accepts a data type (should be number), table array of values and optionally a missing value for situations where the table doesn't contain the value provided.
@@ -92,7 +92,7 @@ Included primitives:
       {
         type : Primitive used to parse the lookup index, should be a number
         table : Array of values, table[type.parse(data)] is used to parse a value
-        missing : Default value when table doesn't contain given index. Note - must be present in table
+        missing : Default value or function to calculate default value given context.
       }
 
  - `string` - a primitive you can use to deal with strings contained within the binary data. Fixed length, pascal strings and character dynamic length charater terminated strings are supported.
@@ -105,7 +105,7 @@ Included primitives:
         terminator : ASCII character code (as integer) for the terminating character, required if length option isn't present. (Length will include terminating character if relevant.)
         read_full_length : If length and terminator options are present this option modifies the behavoir. If `true` the full length of the string will be read, just the extra characters past the terminating character dropped. If `false` and we read the terminating character before reaching the length the remaining data wont be skipped. If `false` and we read 'till the end of length the behavoir is as normal.
         pascal : Used to read pascal strings where the first byte is the length of the following string. Can't be used with the previous options.
-        missing : Default value or function to calculate default value given record context.
+        missing : Default value or function to calculate default value given context.
       }
 
 Records
@@ -126,10 +126,11 @@ Records are created with a structure object, for example:
         hex : bitratchet.hex({ length : 8 })
      });
 
- - Each field's value should either be a primitive or a function that takes the current record context and returns one.
- - During parsing if a primitive returns `undefined` it's data will be skipped.
- - During parsing if a primitive returns anything else without the `parse` property the value returned will be used for the field.
- - During unparsing if a value for a field is missing and the primtive contains a `missing` option the `missing` option's value will be used instead. If the `missing` option is a function the function will be called with the record's context at that point in time.
+ - Each field's value should either be a primitive or a function.
+ - If a function is given it will be called at the time of parsing / unparsing and it will be passed both the `external_state` and `record_context` as parameters.
+ - During parsing / unparsing if a primitive returns `undefined` it's data will be skipped.
+ - During parsing / unparsing if a primitive returns anything else without the `parse` / `unparse` property the value returned will be used for the field.
+ - During unparsing if a value for a field is missing and the primtive contains a `missing` option the `missing` option's value will be used instead. If the `missing` option is a function the function will be called with the passed in external_state and the record's context at that point in time.
 
 Notes
  - For convenience record.parse can accept a hex string instead of a proper ArrayBuffer of data.

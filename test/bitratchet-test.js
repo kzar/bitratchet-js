@@ -393,12 +393,11 @@ test("Nested records with shifting and spare bits", function () {
 
 test("Record containing dynamic primitive that uses record context.", function () {
     var record = bitratchet.record({ read_message : bitratchet.number({ length : 8 }),
-                                     message : function (record) {
+                                     message : function (state, record) {
                 if (record.read_message) {
                     return bitratchet.hex({ length : 8 * 3 });
-                } else {
-                    return bitratchet.skip({ length : 8 * 3 });
                 }
+                return bitratchet.skip({ length : 8 * 3 });
             }});
     same(record.parse(init_buffer(0x01, 0xab, 0xcd, 0xef)), { data : { read_message : 1, message : "abcdef" },
                                                               length : 8 * 4 });
@@ -410,7 +409,7 @@ test("Record containing dynamic primitive that uses record context.", function (
 
 test("Nested record with dynamic primitive that uses parent's context.", function () {
     var data, record = bitratchet.record({ header : bitratchet.record({ length : bitratchet.number({ length : 8 }) }),
-                                           payload : bitratchet.record({ data : function (record) {
+                                           payload : bitratchet.record({ data : function (state, record) {
             return bitratchet.string({ length : record.header.length * 8 });
         }})}),
         result;
@@ -454,7 +453,7 @@ test("Nested record with defaults", function () {
         b : bitratchet.record({
             c : bitratchet.lookup({ type : bitratchet.number({ length : 8 }),
                                     table : ["false", "true"],
-                                    missing : function (record) {
+                                    missing : function (state, record) {
                     return record.a === 2 ? "true" : "false";
                 } })
         })
@@ -477,4 +476,30 @@ test("Nested record with defaults", function () {
     // Test defaults aren't used if we have data
     data.b.c = "false";
     same(a_to_s(record.unparse(data).data), "[0x02, 0x00]");
+});
+
+test("Record using passed in state", function () {
+    var record = bitratchet.record({
+            a : function (state, record_context) {
+                if (state.example === 1) {
+                    return bitratchet.hex({ length : 8 });
+                }
+                return bitratchet.number({ length : 8 });
+            },
+            b : bitratchet.record({
+                c : bitratchet.number({ length : 8, missing : function (state, record_context) {
+                    if (record_context.a === "ff") {
+                        return state.example;
+                    }
+                } })
+            })
+        }),
+        data = init_buffer(0xff, 0x03);
+    // Test
+    same(record.parse(data), { data : { a : 255, b : { c : 3 } }, length : 8 * 2 });
+    same(a_to_s(record.unparse({ a : 255, b : { c : 3 } }).data), a_to_s([0xff, 0x03]));
+    same(record.parse(data, { example : 1 }), { data : { a : "ff", b : { c : 3 } }, length : 8 * 2 });
+    same(a_to_s(record.unparse({ a : "ff", b : { c : 3 } }, { example : 1 }).data), a_to_s([0xff, 0x03]));
+    same(a_to_s(record.unparse({ a : "ff", b : { } }, { example : 1 }).data), a_to_s([0xff, 0x01]));
+    same(a_to_s(record.unparse({ a : 255, b : { } }, { example : 0xab }).data), a_to_s([0xff, 0x00]));
 });
