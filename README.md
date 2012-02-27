@@ -149,7 +149,8 @@ For example here's a timestamp primtive that makes use of the number primitive t
                   return new Date(bitratchet.number(options).parse(data) * 1000);
               },
               unparse : function (data) {
-                  return bitratchet.number(options).unparse(typeof data === 'string' ? Date.parse(data) : data.getTime() / 1000);
+                  var timestamp = (typeof data === 'string' ? Date.parse(data) : data.getTime()) / 1000;
+                  return bitratchet.number(options).unparse(timestamp);
               },
               length : options.length,
               missing : function () { return Date.now(); }
