@@ -34,13 +34,13 @@ You can also require bitratchet from [node.js](http://nodejs.org/):
       bitratchet = require("js/bitratchet-x.x.x-min");
       console.log(bitratchet.version);
 
-If you have the [node-qunit port](https://github.com/kof/node-qunit) port you can run the tests from the command line:
+If you have the [node-qunit port](https://github.com/kof/node-qunit) you can run the tests from the command line:
 
       sudo npm install -g quint
       qunit -c bitratchet:./bitratchet.js -t ./test/bitratchet-test.js
       qunit -c bitratchet:./bitratchet-x.x.x-min.js -t ./test/bitratchet-test.js
 
-Finally you can roll your own minified version using (the uglify tool)[https://github.com/mishoo/UglifyJS]:
+Finally you can roll your own minified version using [the uglify tool](https://github.com/mishoo/UglifyJS):
 
       sudo npm install -g uglify-js
       uglifyjs bitratchet.js > bitratchet-x.x.x-min.js
@@ -50,18 +50,20 @@ Finally you can roll your own minified version using (the uglify tool)[https://g
 Usage
 -----
 
-Using bitratchet is dead simple, generally you'll have a record defined somewhere that follows the specification of the binary format you need to deal with. Then it's as easy as passing an arraybuffer to the parse function of your record. Generating data is as simple as passing the message / file / whatever object to your record's unparse function.
+Using bitratchet is dead simple, generally you'll have a record defined somewhere that follows the specification of the binary format you need to deal with. Then it's as easy as passing an ArrayBuffer to the parse function of your record. Generating data is as simple as passing the message / file / whatever object to your record's unparse function.
 
 Here's a worked example, supposing your dealing with a very simple messaging protocol:
 
 <table>
   <tr>
     <th>Field name</th><th>Field type</th><th>Length</th><th>Description</th>
-  </tr>
-  <tr>
+  </tr><tr>
     <td>sequence</td><td>Unsigned Integer</td><td>Word (16 bits)</td><td>Sequence number for the message.</td>
+  </tr><tr>
     <td>sender</td><td>IP Address</td><td>Long (32 bits)</td><td>IP address of the message sender.</td>
+  </tr><tr>
     <td>length</td><td>Unsigned Integer</td><td>Byte (8 bits)</td><td>Total (byte) length of the text.</td>
+  </tr><tr>
     <td>text</td><td>String</td><td>Variable depending on length field</td><td>Actual text of the message.</td>
   </tr>
 </table>
@@ -90,20 +92,22 @@ We could implement our message record like this:
           text : bitratchet.string({ pascal : true })
       });
 
-... and then supposing we had an arraybuffer containing a message, we could parse it like so:
+... and then supposing we had an ArrayBuffer containing a message, we could parse it like so:
 
       message.parse(arraybuffer).data;
 
 Finally to generate a new message we could do this:
 
-      message.unparse({ sequence : 3, sender : "127.0.0.1", text : "Hello world!" });
+      message.unparse({ sequence : 3, sender : "127.0.0.1", text : "Hello world!" }).data;
 
-Now that example is very simple, it ommits most of the powerful functionality provided but it should be enough to get you started. If you're interested in seing more complicated usage have a look in the tests `test/bitratchet-test.js`, you should be able to find an example of every feature there.
+(Notice that we've referred to the data key of the result each time, that's because as a dynamic primitive `bitratchet.record` returns an object containing the result length and result data.)
+
+Now that example is very simple, it omits most of the powerful functionality provided but hopefully it gives you somewhere to start. If you're interested in seeing more complicated usage have a look in the tests `test/bitratchet-test.js`, you should be able to find an example of every feature there.
 
 Primitives
 ----------
 
-Primitives are used to parse individual fields, often they are provided by a function that takes some options and returns the primitive object. Bitratchet consists of 6 commonly used primtives that handle the meat of the work. You're then free to add your own (detailed below in the Extending section) domain specific ones.
+Primitives are used to parse individual fields, often they are provided by a function that takes some options and returns the primitive object. Bitratchet consists of 6 commonly used primitives that handle the meat of the work. You're then free to add your own (detailed below in the Extending section) domain specific ones.
 
 Primitive objects must follow these rules:
 
@@ -111,7 +115,7 @@ Primitive objects must follow these rules:
  - It must contain an `unparse` field containing a function that accepts the parsed information and returns an ArrayBuffer with the unparsed data.
  - Parse and unparse functions are passed three extra parameters, `external_state`, `record_context` and `parent_field_name`. `external_state` is an object containing any external state needed to parse / unparse the data, `record_context` is an object containing the parsed / unparsed data so far. `parent_field_name` is used by the record primitive to assemble the `record_context` on the fly and can be safely ignored.
  - It should contain a `missing` field - usually just set to `options.missing` - that contains the default value to use. If the `missing` field contains a function it will be called with the `external_state` and `record_context` to determine the default value. If the `missing` field isn't present and a value isn't given an exception will be thrown.
- - It should contain a length field containing a number specifying - in bits - how large the primitive is. If the length field is omitted the primitive is considered of dynmaic length.
+ - It should contain a length field containing a number specifying - in bits - how large the primitive is. If the length field is omitted the primitive is considered of dynamic length.
  - Dynamic length primitives are only necessary when the primitive's length varies depending on _its own value_. They are only necessary for records and other advanced situations. The dynamic primitives `parse` and `unparse` functions must return an object containing the data and bit length like so: `{ data : ..., length : ... }` instead of just the data. Dynamic length fields also have to deal with shifting extra data manually.
  - If the primitive's length is not divisible by 8 the parse function should ignore any extra bits (which will be positioned at the MSB end of the first and MSB byte).
  - If the primitive is created with invalid options, or used with invalid data an exception should be thrown.
@@ -145,7 +149,7 @@ Included primitives:
         missing : Default value or function to calculate default value given context.
       }
 
- - `hex` a simple primitive to read and return hex. Can't work more granulary than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundaries however.)
+ - `hex` a simple primitive to read and return hex. Can't work with more granularity than nibbles for obvious reasons. (As always there are no limitations stopping you reading over byte boundaries however.)
 
 <!-- Break list -->
 
@@ -166,7 +170,7 @@ Included primitives:
         missing : Default value or function to calculate default value given context.
       }
 
- - `string` - a primitive you can use to deal with strings contained within the binary data. Fixed length, pascal strings and character dynamic length charater terminated strings are supported.
+ - `string` - a primitive you can use to deal with strings contained within the binary data. Fixed length, pascal strings and character dynamic length character terminated strings are supported.
 
 <!-- Break list -->
 
@@ -174,7 +178,7 @@ Included primitives:
       {
         length : Length of the string in bits, must be divisible by 8! If terminator option isn't present this is required, otherwise it's optional.
         terminator : ASCII character code (as integer) for the terminating character, required if length option isn't present. (Length will include terminating character if relevant.)
-        read_full_length : If length and terminator options are present this option modifies the behavoir. If `true` the full length of the string will be read, just the extra characters past the terminating character dropped. If `false` and we read the terminating character before reaching the length the remaining data wont be skipped. If `false` and we read 'till the end of length the behavoir is as normal.
+        read_full_length : If length and terminator options are present this option modifies the behavior. If `true` the full length of the string will be read, just the extra characters past the terminating character dropped. If `false` and we read the terminating character before reaching the length the remaining data wont be skipped. If `false` and we read 'till the end of length the behavior is as normal.
         pascal : Used to read pascal strings where the first byte is the length of the following string. Can't be used with the previous options.
         missing : Default value or function to calculate default value given context.
       }
@@ -182,7 +186,7 @@ Included primitives:
 Records
 -------
 
-Records are used to group primitves together, but they are actually are primitives too and follow all the rules that primitives follow. Even so records are a powerful tool, they can be nested and take care of all the bit shifting.
+Records are used to group primitives together, but they are actually are primitives too and follow all the rules that primitives follow. Even so records are a powerful tool, they can be nested and take care of all the bit shifting.
 
 Records are created with a structure object, for example:
 
@@ -210,9 +214,9 @@ Notes
 Extending
 ---------
 
-Bitratchet is easy to extend, you can make your own primitives with total flexibility to suit your needs whilst still leveraging ones provided. (Refer to the list of rules primtives must abide to in the primtive section above when creating your own.)
+Bitratchet is easy to extend, you can make your own primitives with total flexibility to suit your needs whilst still leveraging ones provided. (Refer to the list of rules primitives must abide to in the primitive section above when creating your own.)
 
-For example here's a timestamp primtive that makes use of the number primitive to easily parse timestamps in the data:
+For example here's a time-stamp primitive that makes use of the number primitive to easily parse time-stamps in the data:
 
       function timestamp(options) {
           return {
