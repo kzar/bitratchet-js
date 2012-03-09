@@ -16,18 +16,89 @@ Developed to help implement a commercial telematics messaging protocol in Javasc
 Status
 ------
 
-I'm happy with the interface, it's flexible enough to do everything I've needed to do. There's a fairly comprehensive test suite which is all passing, JSLint passes as well. The internal workings of the included primitives are fairly messy though and could do with a good tidy. Also I'm looking to add a lot more validation, currently little is performed. Lastly although there is a fair amount of documentation it certainly needs work and I would like to add some worked examples.
+I'm happy with the interface, it's flexible enough to do everything I've needed to do. There's a fairly comprehensive test suite which is all passing, JSLint passes as well. The internal workings of the included primitives are fairly messy though and could do with a good tidy. Also I'm looking to add a lot more validation, currently little is performed. I would like to have a tool like [buildr](https://github.com/balupton/buildr.npm) set up to speed up development. Lastly although there is a fair amount of documentation it certainly needs work and I would like to add some more worked examples.
 
 TL;DR - Consider this an initial release.
+
+Setup
+-----
+
+If you just want to use bitratchet you can simply make sure the latest file is included:
+
+      <script src="js/bitratchet-x.x.x-min.js" type="text/javascript"></script>
+
+and you can run the tests in the browser, open `test/bitratchet-test.html`.
+
+You can also require bitratchet from [node.js](http://nodejs.org/):
+
+      bitratchet = require("js/bitratchet-x.x.x-min");
+      console.log(bitratchet.version);
+
+If you have the [node-qunit port](https://github.com/kof/node-qunit) port you can run the tests from the command line:
+
+      sudo npm install -g quint
+      qunit -c bitratchet:./bitratchet.js -t ./test/bitratchet-test.js
+      qunit -c bitratchet:./bitratchet-x.x.x-min.js -t ./test/bitratchet-test.js
+
+Finally you can roll your own minified version using (the uglify tool)[https://github.com/mishoo/UglifyJS]:
+
+      sudo npm install -g uglify-js
+      uglifyjs bitratchet.js > bitratchet-x.x.x-min.js
+
+(I would like to use [buildr](https://github.com/balupton/buildr.npm) or something similar to automate this stuff but I've had no luck getting any of them working. If you're good with this stuff send a pull request!)
 
 Usage
 -----
 
-Make sure you're importing the bitratchet library:
+Using bitratchet is dead simple, generally you'll have a record defined somewhere that follows the specification of the binary format you need to deal with. Then it's as easy as passing an arraybuffer to the parse function of your record. Generating data is as simple as passing the message / file / whatever object to your record's unparse function.
 
-      <script src="js/bitratchet.js" type="text/javascript"></script>
+Here's a worked example, supposing your dealing with a very simple messaging protocol:
 
-For now look at the tests to see how it works, sorry I'll document more soon.
+<table>
+  <tr>
+    <th>Field name</th><th>Field type</th><th>Length</th><th>Description</th>
+  </tr>
+  <tr>
+    <td>sequence</td><td>Unsigned Integer</td><td>Word (16 bits)</td><td>Sequence number for the message.</td>
+    <td>sender</td><td>IP Address</td><td>Long (32 bits)</td><td>IP address of the message sender.</td>
+    <td>length</td><td>Unsigned Integer</td><td>Byte (8 bits)</td><td>Total (byte) length of the text.</td>
+    <td>text</td><td>String</td><td>Variable depending on length field</td><td>Actual text of the message.</td>
+  </tr>
+</table>
+
+We could implement our message record like this:
+
+      function ip_address() {
+          return {
+              parse : function (data) {
+                  var i, ip = "", bytes = new Uint8Array(data);
+                  for (i = 0; i < bytes.length; i += 1) {
+                      ip += bytes[i].toString(10) + ".";
+                  }
+                  return ip.slice(0, -1);
+              },
+              unparse : function (data) {
+                  return bitratchet.hex({ length : 8 * 4 }).unparse(data.replace(/\./g, ""));
+              },
+              length : 8 * 4,
+          };
+      }
+
+      message = bitratchet.record({
+          sequence : bitratchet.number({ length : 8 * 2 }),
+          sender : ip_address(),
+          text : bitratchet.string({ pascal : true })
+      });
+
+... and then supposing we had an arraybuffer containing a message, we could parse it like so:
+
+      message.parse(arraybuffer).data;
+
+Finally to generate a new message we could do this:
+
+      message.unparse({ sequence : 3, sender : "127.0.0.1", text : "Hello world!" });
+
+Now that example is very simple, it ommits most of the powerful functionality provided but it should be enough to get you started. If you're interested in seing more complicated usage have a look in the tests `test/bitratchet-test.js`, you should be able to find an example of every feature there.
 
 Primitives
 ----------

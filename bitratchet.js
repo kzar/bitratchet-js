@@ -587,3 +587,8 @@ if (!bitratchet) {
         };
     }
 }());
+
+// Finally if we're running from node.js export the object
+if (module) {
+    module.exports = bitratchet;
+}

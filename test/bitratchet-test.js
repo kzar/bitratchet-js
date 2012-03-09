@@ -1,5 +1,10 @@
-/*global ArrayBuffer, Uint8Array, bitratchet, module, ok, same, test, raises*/
+/*global QUnit, ArrayBuffer, Uint8Array, bitratchet, module:true, ok, same, test, raises*/
 /*jslint sloppy: true*/
+
+// Work around module clash if we're using node.js
+if (QUnit.module) {
+    module = QUnit.module;
+}
 
 // Convert array / ArrayBuffer view to string for comparison in tests
 function a_to_s(a) {
