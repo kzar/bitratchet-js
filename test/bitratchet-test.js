@@ -333,6 +333,64 @@ test("Lookup", function () {
                                     table : { 0 : "off", 1 : "on"} }).unparse("on")), "[0x01]");
 });
 
+module("Array");
+
+test("Basic", function () {
+    same(bitratchet.array({ type : bitratchet.number({ length : 8 }),
+                            size : 3}).parse(init_buffer(0x01, 0x02, 0x3)), [1, 2, 3]);
+    same(bitratchet.array({ type : bitratchet.number({ length : 8 }),
+                            size : 3}).unparse([1, 2, 3]), init_buffer(0x01, 0x02, 0x3));
+    same(bitratchet.array({ type : bitratchet.number({ length : 8 }),
+                            size : 3}).length, 8 * 3);
+});
+
+test("Array of a dynamic type", function () {
+    var data = init_buffer(0x05, 0x61, 0x62, 0x63, 0x64, 0x65, 0x03, 0x78, 0x79, 0x7a),
+        array = bitratchet.array({ type : bitratchet.string({ pascal : true }),
+                                   size : 3});
+    same(array.parse(data), { length : 10 * 8, data : ["abcde", "xyz"]});
+    same(array.unparse(["abcde", "xyz"]), { length : 10 * 8, data : data });
+});
+
+test("Dynamic size", function () {
+    var array = bitratchet.array({ type : bitratchet.number({ length : 8 }),
+                                   size : function (state, record) {
+                return state.size;
+            } });
+    same(array.parse(init_buffer(0x01, 0x02, 0x3), { size : 3 }), { length : 8 * 3, data : [1, 2, 3] });
+    same(array.parse(init_buffer(0x01, 0x02, 0x3), { size : 2 }), { length : 8 * 2, data : [1, 2] });
+    same(array.parse(init_buffer(0x01, 0x02, 0x3), { size : 1 }), { length : 8, data : [1] });
+    same(array.parse(init_buffer(0x01, 0x02, 0x3), { size : 0 }), { length : 0, data : [] });
+    same(array.unparse([1, 2, 3], { size : 3 }), { length : 8 * 3, data : init_buffer(0x01, 0x02, 0x3) });
+    same(array.unparse([1, 2], { size : 2 }), { length : 8 * 2, data : init_buffer(0x01, 0x02) });
+    same(array.unparse([1], { size : 1 }), { length : 8, data : init_buffer(0x01) });
+    same(array.unparse([], { size : 0 }), { length : 0, data : undefined });
+});
+
+test("Array of dynamic type with dynamic size", function () {
+    var data = init_buffer(0x05, 0x61, 0x62, 0x63, 0x64, 0x65, 0x03, 0x78, 0x79, 0x7a),
+    array = bitratchet.array({ type : bitratchet.string({ pascal : true }),
+                               size : function(state, record) {
+                                   return state.size;
+                               } });
+    same(array.parse(data, { size : 2 }), { length : 10 * 8, data : ["abcde", "xyz"]});
+    same(array.parse(data, { size : 1 }), { length : 6 * 8, data : ["abcde", "xyz"]});
+    same(array.unparse(["abcde", "xyz"], { size : 2 }), { length : 10 * 8, data : data });
+    same(array.unparse(["abcde"], { size : 1 }), { length : 6 * 8, data : init_buffer(0x05, 0x61, 0x62, 0x63, 0x64, 0x65) });
+});
+
+test("Dynamic type - static", function () {
+    // FIXME - write these tests
+});
+
+test("Dynamic type - dynamic", function () {
+    // FIXME - write these tests
+});
+
+test("Dynamic type - dynamic + static with dynamic size", function () {
+    // FIXME - write these tests
+});
+
 module("Record");
 
 test("Basic", function () {

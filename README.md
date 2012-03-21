@@ -183,6 +183,8 @@ Included primitives:
         missing : Default value or function to calculate default value given context.
       }
 
+ - `array` - a primitive you can use for convenience if you've got an array in your data. FIXME - Currently in development, watch this space!
+
 Records
 -------
 
@@ -202,7 +204,7 @@ Records are created with a structure object, for example:
      });
 
  - Each field's value should either be a primitive or a function.
- - If a function is given it will be called at the time of parsing / unparsing and it will be passed both the `external_state` and `record_context` as parameters.
+ - If a function is given it will be called at the time of parsing / unparsing and it will be passed both the `external_state` and `record_context` as parameters. The function should then return a primitive or actual value to use for the field.
  - During parsing / unparsing if a primitive returns `undefined` it's data will be skipped.
  - During parsing / unparsing if a primitive returns anything else without the `parse` / `unparse` property the value returned will be used for the field.
  - During unparsing if a value for a field is missing and the primtive contains a `missing` option the `missing` option's value will be used instead. If the `missing` option is a function the function will be called with the passed in external_state and the record's context at that point in time.
