@@ -570,7 +570,7 @@ if (!bitratchet) {
                     return this.length === undefined ? { length : raw_data.length, data : raw_data.data } : raw_data.data;
                 },
                 length : (function () {
-                    if (typeof options.type !== 'functon' && options.type.length &&
+                    if (typeof options.type !== 'function' && options.type.length &&
                             typeof options.size !== 'function') {
                         return options.size * options.type.length;
                     }
