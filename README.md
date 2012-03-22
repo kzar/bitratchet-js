@@ -183,7 +183,7 @@ Included primitives:
         missing : Default value or function to calculate default value given context.
       }
 
- - `array` - a primitive you can use for convenience if you've got an array in your data. It's quite powerful, you can have the type or size vary dynamically depending on the record and external state. FIXME - Currently in development, watch this space!
+ - `array` - a primitive you can use for convenience if you've got an array in your data. It's quite powerful, you can have the type or size vary dynamically depending on the record and external state.
 
 <!-- Break list -->
 

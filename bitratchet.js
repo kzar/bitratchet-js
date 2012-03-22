@@ -1,4 +1,4 @@
-/*global ArrayBuffer, Uint8Array*/
+/*global module, ArrayBuffer, Uint8Array*/
 /*jslint bitwise: true, regexp: true, indent: 4*/
 
 var bitratchet;
@@ -533,6 +533,51 @@ if (!bitratchet) {
         };
     }
 
+    if (typeof bitratchet.array !== 'function') {
+        bitratchet.array = function array(options) {
+            return {
+                parse : function (data, state, record) {
+                    var i, values,
+                        value_array = [],
+                        fields = {},
+                        type = typeof options.type === 'function' ? options.type(state, record) : options.type,
+                        size = typeof options.size === 'function' ? options.size(state, record) : options.size;
+                    // Set up a record and parse the data
+                    for (i = 0; i < size; i += 1) {
+                        fields[i] = type;
+                    }
+                    values = bitratchet.record(fields).parse(data);
+                    // Put the result data into an array
+                    for (i = 0; i < size; i += 1) {
+                        value_array[i] = values.data[i];
+                    }
+                    // Finally return the result
+                    return this.length === undefined ? { length : values.length, data : value_array } : value_array;
+                },
+                unparse : function (data, state, record) {
+                    var raw_data, i,
+                        fields = {},
+                        type = typeof options.type === 'function' ? options.type(state, record) : options.type,
+                        size = typeof options.size === 'function' ? options.size(state, record) : options.size,
+                        values = {};
+                    // Set up a record and unparse the data
+                    for (i = 0; i < size; i += 1) {
+                        fields[i] = type;
+                        values[i] = data[i];
+                    }
+                    raw_data = bitratchet.record(fields).unparse(values);
+                    // Finally return the result
+                    return this.length === undefined ? { length : raw_data.length, data : raw_data.data } : raw_data.data;
+                },
+                length : (function () {
+                    if (typeof options.type !== 'functon' && options.type.length &&
+                            typeof options.size !== 'function') {
+                        return options.size * options.type.length;
+                    }
+                }())
+            };
+        };
+    }
 
     if (typeof bitratchet.hex !== 'function') {
         bitratchet.hex = function hex(options) {

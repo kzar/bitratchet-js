@@ -347,7 +347,7 @@ test("Basic", function () {
 test("Array of a dynamic type", function () {
     var data = init_buffer(0x05, 0x61, 0x62, 0x63, 0x64, 0x65, 0x03, 0x78, 0x79, 0x7a),
         array = bitratchet.array({ type : bitratchet.string({ pascal : true }),
-                                   size : 3});
+                                   size : 2});
     same(array.parse(data), { length : 10 * 8, data : ["abcde", "xyz"]});
     same(array.unparse(["abcde", "xyz"]), { length : 10 * 8, data : data });
 });
@@ -364,7 +364,7 @@ test("Dynamic size", function () {
     same(array.unparse([1, 2, 3], { size : 3 }), { length : 8 * 3, data : init_buffer(0x01, 0x02, 0x3) });
     same(array.unparse([1, 2], { size : 2 }), { length : 8 * 2, data : init_buffer(0x01, 0x02) });
     same(array.unparse([1], { size : 1 }), { length : 8, data : init_buffer(0x01) });
-    same(array.unparse([], { size : 0 }), { length : 0, data : undefined });
+    same(array.unparse([], { size : 0 }), { length : 0, data : new ArrayBuffer() });
 });
 
 test("Array of dynamic type with dynamic size", function () {
