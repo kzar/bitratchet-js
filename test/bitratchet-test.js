@@ -286,7 +286,7 @@ test("Hex", function () {
             bitratchet.hex({ length : 4 }).unparse("nonsense");
         },
         function (err) {
-            return err === "Invalid hex, can't unparse.";
+            return err === "Invalid hex 'nonsense', can't unparse.";
         }
     );
     // Test that good input gives right result

@@ -606,7 +606,7 @@ if (!bitratchet) {
                 },
                 unparse : function (data) {
                     if (!/^[0-9a-fA-F]+$/.test(data)) {
-                        throw "Invalid hex, can't unparse.";
+                        throw "Invalid hex '" + data + "', can't unparse.";
                     }
                     var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),
                         bytes = new Uint8Array(buffer);
