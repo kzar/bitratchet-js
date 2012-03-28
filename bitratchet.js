@@ -634,6 +634,6 @@ if (!bitratchet) {
 }());
 
 // Finally if we're running from node.js export the object
-if (module) {
+if (typeof (module) !== 'undefined') {
     module.exports = bitratchet;
 }
