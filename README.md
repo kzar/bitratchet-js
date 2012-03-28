@@ -11,7 +11,7 @@ Features include:
  - Handle dynamic fields that can vary in length and structure based on any context of the data already parsed and external state.
  - Build your own flexible primitives that can extend the library to your problem domain. They can fully leverage the provided primitives.
 
-Developed to help implement a commercial telematics messaging protocol in Javascript.
+Developed to help implement a commercial telematics messaging protocol in Javascript. It's also used for parsing our mobile messaging protocol.
 
 Status
 ------
@@ -190,7 +190,7 @@ Included primitives:
       Expected options:
       {
         size : Size of the array, how many items are to be read? Alternatively this can be a function that takes the record and external state and returns the size.
-        type : Primtive type for each item in the array. Can also be a function that takes record and external state and returns the primtive type.
+        type : Primtive type for each item in the array. Can also be a function that takes record and external state and returns the primtive type. The function also gets access to the array current array key as the third parameter allowing you to have an array of different types.
       }
 
 Records

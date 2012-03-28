@@ -415,6 +415,19 @@ test("Dynamic type - dynamic + static with dynamic size", function () {
     same(array.unparse(["abcde"], { size : 1, type : bitratchet.string({ pascal : true }) }), { length : 8 * 6, data : init_buffer(0x05, 0x61, 0x62, 0x63, 0x64, 0x65) });
 });
 
+test("Dynamic type based on index", function () {
+    var array = bitratchet.array({
+            type : function(state, record, index) {
+                return bitratchet.hex({ length : 8 * (index + 1) });
+            },
+            size : 3
+        }),
+        data = init_buffer(0xab, 0xcd, 0xef, 0x01, 0x02, 0x03);
+    same(array.parse(data), { data : ["ab", "cdef", "010203"], length : 8 * 6 });
+    same(array.unparse(["ab", "cdef", "010203"]), { data : data, length : 8 * 6 });
+});
+
+
 module("Record");
 
 test("Basic", function () {

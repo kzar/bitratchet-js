@@ -540,11 +540,10 @@ if (!bitratchet) {
                     var i, values,
                         value_array = [],
                         fields = {},
-                        type = typeof options.type === 'function' ? options.type(state, record) : options.type,
                         size = typeof options.size === 'function' ? options.size(state, record) : options.size;
                     // Set up a record and parse the data
                     for (i = 0; i < size; i += 1) {
-                        fields[i] = type;
+                        fields[i] = typeof options.type === 'function' ? options.type(state, record, i) : options.type;
                     }
                     values = bitratchet.record(fields).parse(data);
                     // Put the result data into an array
@@ -557,12 +556,11 @@ if (!bitratchet) {
                 unparse : function (data, state, record) {
                     var raw_data, i,
                         fields = {},
-                        type = typeof options.type === 'function' ? options.type(state, record) : options.type,
                         size = typeof options.size === 'function' ? options.size(state, record) : options.size,
                         values = {};
                     // Set up a record and unparse the data
                     for (i = 0; i < size; i += 1) {
-                        fields[i] = type;
+                        fields[i] = typeof options.type === 'function' ? options.type(state, record, i) : options.type;
                         values[i] = data[i];
                     }
                     raw_data = bitratchet.record(fields).unparse(values);
