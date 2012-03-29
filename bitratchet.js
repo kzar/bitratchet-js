@@ -12,7 +12,7 @@ if (!bitratchet) {
     if (typeof bitratchet.version !== 'object') {
         bitratchet.version = {
             major : 1,
-            patch : 0,
+            patch : 1,
             minor : 0,
             toString : function () {
                 return this.major + "." + this.minor + "." + this.patch;
