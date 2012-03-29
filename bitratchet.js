@@ -436,17 +436,13 @@ if (!bitratchet) {
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
             return {
-                parse : function (data, context) {
+                parse : function (data) {
                     var index = options.type.parse(data);
                     // We have the value
                     if (options.table.hasOwnProperty(index)) {
                         return options.table[index];
                     }
-                    // Not sure, check if we've been given a default
-                    if (typeof (options.missing) === 'function') {
-                        return options.missing(context);
-                    }
-                    return options.missing;
+                    throw "Value not in lookup-table.";
                 },
                 unparse : function (data) {
                     var key, result;
@@ -457,7 +453,9 @@ if (!bitratchet) {
                             return result;
                         }
                     }
-                    throw "Value given not in lookup-table.";
+                    if (options.missing === undefined) {
+                        throw "Value '" + data + "' not in lookup-table.";
+                    }
                 },
                 length : options.type.length,
                 missing : options.missing

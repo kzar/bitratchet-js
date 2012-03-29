@@ -308,10 +308,21 @@ test("Lookup", function () {
     raises(
         function () {
             bitratchet.lookup({ type : bitratchet.number({ length: 8}),
-                                table : [] }).unparse(data);
+                                table : [] }).unparse(1);
         },
         function (err) {
-            return err === "Value given not in lookup-table.";
+            return err === "Value '1' not in lookup-table.";
+        }
+    );
+    raises(
+        function () {
+            // Having a missing parameter is no excuse for wrong data
+            bitratchet.lookup({ type : bitratchet.number({ length : 2 }),
+                                table : ["off", "mistake"],
+                                missing : "off" }).parse(init_buffer(0x02));
+        },
+        function (err) {
+            return err === "Value not in lookup-table.";
         }
     );
     // Usually table is an array
@@ -319,9 +330,6 @@ test("Lookup", function () {
                              table : ["off", "on"] }).parse(data), "on");
     same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
                              table : ["one", "two", "three", "four"] }).parse(data), "four");
-    same(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
-                             table : ["off", "mistake"],
-                             missing : "off" }).parse(data), "off");
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
                                     table : ["off", "on"] }).unparse("on")), "[0x01]");
     same(a_to_s(bitratchet.lookup({ type : bitratchet.number({ length : 2}),
@@ -417,7 +425,7 @@ test("Dynamic type - dynamic + static with dynamic size", function () {
 
 test("Dynamic type based on index", function () {
     var array = bitratchet.array({
-            type : function(state, record, index) {
+            type : function (state, record, index) {
                 return bitratchet.hex({ length : 8 * (index + 1) });
             },
             size : 3
