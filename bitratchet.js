@@ -443,7 +443,7 @@ if (!bitratchet) {
                         return options.table[index];
                     }
                     throw ("Value '" + index + "' not in lookup-table" +
-                           (field_name ? " " + field_name + "." : "."));
+                           (field_name ? " '" + field_name + "'." : "."));
                 },
                 unparse : function (data, state, context, field_name) {
                     var key, result;
