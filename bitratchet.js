@@ -1,5 +1,5 @@
 /*global module, ArrayBuffer, Uint8Array*/
-/*jslint bitwise: true, regexp: true, indent: 4*/
+/*jslint unparam : true, bitwise: true, regexp: true, indent: 4*/
 
 var bitratchet;
 if (!bitratchet) {
@@ -13,7 +13,7 @@ if (!bitratchet) {
         bitratchet.version = {
             major : 1,
             patch : 1,
-            minor : 0,
+            minor : 1,
             toString : function () {
                 return this.major + "." + this.minor + "." + this.patch;
             }
@@ -436,15 +436,16 @@ if (!bitratchet) {
     if (typeof bitratchet.lookup !== 'function') {
         bitratchet.lookup = function lookup(options) {
             return {
-                parse : function (data) {
+                parse : function (data, state, context, field_name) {
                     var index = options.type.parse(data);
                     // We have the value
                     if (options.table.hasOwnProperty(index)) {
                         return options.table[index];
                     }
-                    throw "Value not in lookup-table.";
+                    throw ("Value '" + index + "' not in lookup-table" +
+                           (field_name ? " " + field_name + "." : "."));
                 },
-                unparse : function (data) {
+                unparse : function (data, state, context, field_name) {
                     var key, result;
                     for (key in options.table) {
                         if (options.table.hasOwnProperty(key) && options.table[key] === data) {
@@ -454,7 +455,8 @@ if (!bitratchet) {
                         }
                     }
                     if (options.missing === undefined) {
-                        throw "Value '" + data + "' not in lookup-table.";
+                        throw ("Value '" + data + "' not in lookup-table" +
+                               (field_name ? " '" + field_name + "'." : "."));
                     }
                 },
                 length : options.type.length,
@@ -601,7 +603,7 @@ if (!bitratchet) {
                     return hex.substr(hex.length - options.length / 4);
                 },
                 unparse : function (data) {
-                    if (!/^[0-9a-fA-F]+$/.test(data)) {
+                    if (!data || typeof (data) !== 'string' || !/^[0-9a-fA-F]+$/.test(data)) {
                         throw "Invalid hex '" + data + "', can't unparse.";
                     }
                     var i, buffer = new ArrayBuffer(Math.ceil(options.length / 8)),

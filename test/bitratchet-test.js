@@ -322,9 +322,24 @@ test("Lookup", function () {
                                 missing : "off" }).parse(init_buffer(0x02));
         },
         function (err) {
-            return err === "Value not in lookup-table.";
+            return err === "Value '2' not in lookup-table.";
         }
     );
+    raises(
+        function () {
+            // If inside record we should get the field name too
+            bitratchet.record({
+                the_lookup : bitratchet.lookup({
+                    type : bitratchet.number({ length: 8}),
+                    table : []
+                })
+            }).unparse({ the_lookup : 1 });
+        },
+        function (err) {
+            return err === "Value '1' not in lookup-table 'the_lookup'.";
+        }
+    );
+
     // Usually table is an array
     same(bitratchet.lookup({ type : bitratchet.number({ length : 1}),
                              table : ["off", "on"] }).parse(data), "on");
