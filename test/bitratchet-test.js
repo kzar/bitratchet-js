@@ -114,6 +114,18 @@ test("Large numbers", function () {
     same(a_to_s(bitratchet.number({ length : 8 * 6, signed : true }).unparse(-1)), a_to_s(data));
 });
 
+test("Little endian", function () {
+    // Standard
+    same(bitratchet.number({ length : 8 * 4, endian: 'little' }).parse(init_buffer(0x46, 0x00, 0x00, 0x00)), 70);
+    same(a_to_s(bitratchet.number({ length : 8 * 4, endian: 'little' }).unparse(70)), a_to_s(init_buffer(0x46, 0x00, 0x00, 0x00)));
+    // Signed
+    same(bitratchet.number({ length : 8 * 4, endian: 'little', signed : true }).parse(init_buffer(0xff, 0x02, 0x16, 0xff)), -15334657);
+    same(a_to_s(bitratchet.number({ length : 8 * 4, endian: 'little', signed: true }).unparse(-15334657)), a_to_s(init_buffer(0xff, 0x02, 0x16, 0xff)));
+    // Scaled
+    same(bitratchet.number({ length : 8 * 4, endian: 'little', scale_range: 360 }).parse(init_buffer(0x00, 0x00, 0x00, 0x0f)), 21.09375);
+    same(a_to_s(bitratchet.number({ length : 8 * 4, endian: 'little', scale_range: 360 }).unparse(21.09375)), a_to_s(init_buffer(0x00, 0x00, 0x00, 0x0f)));
+});
+
 module("String");
 
 test("Validation", function () {

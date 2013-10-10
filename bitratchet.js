@@ -13,7 +13,7 @@ if (!bitratchet) {
         bitratchet.version = {
             major : 1,
             patch : 1,
-            minor : 1,
+            minor : 2,
             toString : function () {
                 return this.major + "." + this.minor + "." + this.patch;
             }
@@ -254,9 +254,18 @@ if (!bitratchet) {
                 }
                 return bytes;
             }
-            function binary_to_number(bytes, bit_count, signed) {
-                var i, number, negative;
+            function binary_to_number(bytes, bit_count, signed, endian) {
+                var i, number, negative, tmp;
                 number = 0;
+                // If little endian invert it
+                if (endian === 'little') {
+                  tmp = new Uint8Array(new ArrayBuffer(bytes.length));
+                  for (i = 0; i < bytes.length; i += 1) {
+                    tmp[i] = bytes[bytes.length - 1 - i];
+                  }
+                  bytes = tmp;
+                }
+
                 // If number's signed run twos_compliment on binary before we start
                 if (signed && (bytes[0] & Math.pow(2, bits_used(bit_count) - 1))) {
                     twos_compliment(bytes, bit_count);
@@ -271,8 +280,8 @@ if (!bitratchet) {
                 // Finally add correct sign and return
                 return negative ? -number : number;
             }
-            function number_to_binary(number, bit_count) {
-                var i, negative, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
+            function number_to_binary(number, bit_count, endian) {
+                var i, tmp_buffer, tmp_bytes, negative, buffer = new ArrayBuffer(Math.ceil(bit_count / 8)),
                     bytes = new Uint8Array(buffer);
                 // Deal with negative numbers
                 if (number < 0) {
@@ -289,6 +298,15 @@ if (!bitratchet) {
                 }
                 // Mask any extra bits and return
                 bytes[0] = bytes[0] & (Math.pow(2, bits_used(bit_count)) - 1);
+                // If little endian invert it
+                if (endian === 'little') {
+                  tmp_buffer = new ArrayBuffer(bytes.length);
+                  tmp_bytes = new Uint8Array(tmp_buffer);
+                  for (i = 0; i < bytes.length; i += 1) {
+                    tmp_bytes[i] = bytes[bytes.length - 1 - i];
+                  }
+                  buffer = tmp_buffer;
+                }
                 return buffer;
             }
             function round_number(number, precision) {
@@ -314,10 +332,10 @@ if (!bitratchet) {
                         copy = new Uint8Array(new ArrayBuffer(data.length));
                         copy.set(data);
                         // And parse
-                        return round_number(binary_to_number(copy, options.length, options.signed) * scale(options), options.precision);
+                        return round_number(binary_to_number(copy, options.length, options.signed, options.endian) * scale(options), options.precision);
                     },
                     unparse : function (data) {
-                        return number_to_binary(Math.round(data / scale(options)), options.length);
+                        return number_to_binary(Math.round(data / scale(options)), options.length, options.endian);
                     },
                     length : options.length,
                     missing : options.missing

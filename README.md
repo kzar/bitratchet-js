@@ -130,6 +130,7 @@ Included primitives:
       {
         length : Length of the number in bits, this is required.
         signed : Is the number signed? (Default is false.)
+        endian : Is this number 'little' endian or 'big'? (Default is 'big')
         precision : Decimal place precision to round to. (Default is no rounding.)
         scale_range : If the number is scaled to a range provide the range. (The same as providing a custom_scale of Math.pow(2, options.length) / options.scale_range)
         custom_scale : If the number is scaled inefficiently you can directly provide the scale.
