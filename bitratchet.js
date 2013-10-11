@@ -13,7 +13,7 @@ if (!bitratchet) {
         bitratchet.version = {
             major : 1,
             patch : 1,
-            minor : 2,
+            minor : 3,
             toString : function () {
                 return this.major + "." + this.minor + "." + this.patch;
             }
@@ -147,8 +147,10 @@ if (!bitratchet) {
                                 } else {
                                     // Dynamic field, parse and take note of length
                                     container = v.parse(shift_bytes(data, position, 0), external_state, context, k);
-                                    field = container.data;
-                                    position += container.length;
+                                    if (container) {
+                                        field = container.data;
+                                        position += container.length;
+                                    }
                                 }
                             } else {
                                 // Result was given instead of primitive, just use that
@@ -209,19 +211,23 @@ if (!bitratchet) {
                             } else {
                                 // Dynamic field
                                 container = v.unparse(data[k], external_state, context, k);
-                                field = container.data;
-                                field_length = container.length;
+                                if (container) {
+                                    field = container.data;
+                                    field_length = container.length;
+                                }
                             }
-                            if (field === undefined) {
-                                // We're skipping data as we have a length but no value - zero it
-                                fields.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(field_length / 8))),
-                                               length : field_length });
-                            } else {
-                                // We have data, add it
-                                fields.push({ value : new Uint8Array(field), length : field_length });
+                            if (field_length) {
+                                if (field === undefined) {
+                                    // We're skipping data as we have a length but no value - zero it
+                                    fields.push({ value : new Uint8Array(new ArrayBuffer(Math.ceil(field_length / 8))),
+                                                  length : field_length });
+                                } else {
+                                    // We have data, add it
+                                    fields.push({ value : new Uint8Array(field), length : field_length });
+                                }
+                                // Either way increase our overall length
+                                record_length += field_length;
                             }
-                            // Either way increase our overall length
-                            record_length += field_length;
                         }
                     });
                     return { data : assemble_data(fields, record_length), length : record_length };

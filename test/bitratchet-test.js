@@ -575,6 +575,11 @@ test("Record that skips some data.", function () {
     same(record.parse(data), { data : { skipped : "WAT", data : "ff12" }, length : 8 * 2 });
     same(a_to_s(record.unparse({ data : "FF12" }).data), a_to_s([0xff, 0x12]));
     same(a_to_s(record.unparse({ data : "FF12", skipped : "WAT" }).data), a_to_s([0xff, 0x12]));
+    // Test skip of 0 bits works
+    record = bitratchet.record({ skipped : bitratchet.skip({ length : 0 }),
+                                 data : bitratchet.hex({ length : 8 * 3 }) });
+    same(record.parse(data), { data : { data : "ff1234" }, length : 8 * 3 });
+    same(a_to_s(record.unparse({ data : "FF1234" }).data), a_to_s([0xff, 0x12, 0x34]));
 });
 
 test("Nested record with defaults", function () {
